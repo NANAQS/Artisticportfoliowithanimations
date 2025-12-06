@@ -11,37 +11,40 @@ function createPrismaClient(): PrismaClient {
   const prismaUrl = process.env.PRISMA_DATABASE_URL || process.env.DATABASE_URL
   const isAccelerate = prismaUrl?.startsWith('prisma+')
 
-  // Configuração de log
-  const logConfig = process.env.NODE_ENV === 'development' 
-    ? ['error', 'warn'] as const
-    : ['error'] as const
-
   if (isAccelerate) {
     // Usar Prisma Accelerate (não precisa de adapter)
-    // O Prisma Client detecta automaticamente a URL do Accelerate via PRISMA_DATABASE_URL ou DATABASE_URL
-    return new PrismaClient({ log: logConfig })
-  } else if (process.env.DATABASE_URL && !process.env.VERCEL) {
-    // Usar conexão direta com PostgreSQL apenas em ambientes não-Vercel
-    // Na Vercel, usar Prisma Accelerate ou conexão padrão
+    return new PrismaClient()
+  } else if (process.env.DATABASE_URL && !process.env.VERCEL && process.env.NODE_ENV !== 'production') {
+    // Usar conexão direta com PostgreSQL apenas em desenvolvimento local
     try {
       const connectionString = process.env.DATABASE_URL
       const pool = new pg.Pool({ connectionString })
       const adapter = new PrismaPg(pool)
-      return new PrismaClient({ adapter, log: logConfig })
+      return new PrismaClient({ adapter })
     } catch (error) {
-      // Se falhar, usar PrismaClient padrão
-      return new PrismaClient({ log: logConfig })
+      return new PrismaClient()
     }
   } else {
-    // Na Vercel ou quando não há DATABASE_URL, criar PrismaClient padrão
+    // Na Vercel, produção ou quando não há DATABASE_URL, criar PrismaClient padrão
     // O Prisma Client lerá a URL das variáveis de ambiente automaticamente
-    return new PrismaClient({ log: logConfig })
+    return new PrismaClient()
   }
 }
 
-export const prisma =
-  globalForPrisma.prisma ?? createPrismaClient()
+// Proxy para inicialização verdadeiramente lazy
+// O Prisma Client só será criado quando uma propriedade for acessada
+const prismaProxy = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    if (!globalForPrisma.prisma) {
+      globalForPrisma.prisma = createPrismaClient()
+    }
+    const prisma = globalForPrisma.prisma
+    const value = (prisma as any)[prop]
+    if (typeof value === 'function') {
+      return value.bind(prisma)
+    }
+    return value
+  },
+})
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma
-}
+export const prisma = prismaProxy as PrismaClient

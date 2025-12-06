@@ -9,14 +9,18 @@ const nextConfig = {
       },
     ],
   },
-  // Otimizações para produção
-  swcMinify: true,
   // Garantir que o Prisma seja gerado durante o build
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals.push('@prisma/client')
     }
     return config
+  },
+  // Evitar que as rotas de API sejam executadas durante o build
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
   },
 }
 
