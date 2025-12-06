@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model GalleryArtwork {
+  id          Int      @id @default(autoincrement())
+  title       String
+  category    String
+  image       String
+  description String
+  gridClass   String   @default("md:col-span-1 md:row-span-1")
+  order       Int      @default(0)
+  youtubeUrl  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("gallery_artworks")
+}
+
+model CarouselArtwork {
+  id        Int      @id @default(autoincrement())
+  url       String
+  title     String
+  category  String
+  year      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("carousel_artworks")
+}
+
+model ScrollContent {
+  id          Int      @id @default(autoincrement())
+  image       String
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("scroll_content")
+}
+
+model Testimonial {
+  id                Int      @id @default(autoincrement())
+  name              String
+  role              String
+  image             String
+  text              String
+  rating            Int
+  skillsHighlighted String[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("testimonials")
+}
+
+model Skill {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  level     Int
+  mentions  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("skills")
+}
+
+model Visit {
+  id          Int      @id @default(autoincrement())
+  ip          String
+  userAgent   String?
+  path        String
+  country     String?
+  region      String?
+  city        String?
+  latitude    Float?
+  longitude   Float?
+  timezone    String?
+  referer     String?
+  createdAt   DateTime @default(now())
+
+  @@map("visits")
+  @@index([createdAt])
+  @@index([country])
+  @@index([path])
+}
+
+model ContactConfig {
+  id          Int      @id @default(autoincrement())
+  email       String
+  phone       String?
+  location    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("contact_config")
+}
+
+model SocialLink {
+  id          Int      @id @default(autoincrement())
+  name        String
+  url         String
+  icon        String?  // Nome do ícone (ex: 'Twitter', 'LinkedIn', 'GitHub')
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("social_links")
+  @@index([order])
+}
+
+model AboutConfig {
+  id          Int      @id @default(autoincrement())
+  title       String
+  subtitle    String
+  description String   @db.Text
+  paragraph2  String?  @db.Text
+  image       String
+  skills      Json     // Array de objetos { icon: string, title: string, description: string }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("about_config")
+}
+
+model AdBanner {
+  id            Int      @id @default(autoincrement())
+  imageUrl      String
+  href           String?  // URL de destino quando clicado
+  position       String   // 'before' ou 'after'
+  targetElement  String   // Nome do elemento (ex: 'hero', 'gallery', 'about')
+  order          Int      @default(0) // Ordem quando há múltiplos anúncios na mesma posição
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("ad_banners")
+  @@index([targetElement, position, order])
+  @@index([isActive])
+}
