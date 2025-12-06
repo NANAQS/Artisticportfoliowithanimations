@@ -12,14 +12,8 @@ let prisma: PrismaClient
 
 if (isAccelerate) {
   // Usar Prisma Accelerate (não precisa de adapter)
-  const connectionString = process.env.PRISMA_DATABASE_URL || process.env.DATABASE_URL!
-  prisma = new PrismaClient({
-    datasources: {
-      db: {
-        url: connectionString,
-      },
-    },
-  })
+  // O Prisma Client detecta automaticamente a URL do Accelerate via PRISMA_DATABASE_URL ou DATABASE_URL
+  prisma = new PrismaClient()
 } else {
   // Usar conexão direta com PostgreSQL
   const connectionString = process.env.DATABASE_URL!
