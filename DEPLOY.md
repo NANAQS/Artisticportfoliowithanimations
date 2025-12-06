@@ -43,6 +43,16 @@ npx prisma db push
 
 No dashboard da Vercel, vá em **Settings > Environment Variables** e adicione:
 
+#### Se estiver usando Prisma Accelerate (Recomendado):
+```
+DATABASE_URL=postgres://user:password@host:5432/database?sslmode=require
+POSTGRES_URL=postgres://user:password@host:5432/database?sslmode=require
+PRISMA_DATABASE_URL=prisma+postgres://accelerate.prisma-data.net/?api_key=seu_api_key
+JWT_SECRET=sua-chave-secreta-super-forte-aqui
+NODE_ENV=production
+```
+
+#### Se estiver usando conexão direta:
 ```
 DATABASE_URL=postgresql://user:password@host:5432/database?schema=public
 JWT_SECRET=sua-chave-secreta-super-forte-aqui
@@ -51,7 +61,8 @@ NODE_ENV=production
 
 **Importante:**
 - Use uma string aleatória forte para `JWT_SECRET` (pode usar: `openssl rand -base64 32`)
-- A `DATABASE_URL` deve ser a string de conexão completa do seu banco
+- Se usar Prisma Accelerate, configure as três variáveis: `DATABASE_URL`, `POSTGRES_URL` e `PRISMA_DATABASE_URL`
+- O Prisma Accelerate melhora a performance e reduz conexões ao banco
 
 ### 4. Fazer Deploy
 
@@ -133,11 +144,20 @@ O projeto usa Prisma com PostgreSQL. Certifique-se de que:
 
 ## Variáveis de Ambiente Necessárias
 
-| Variável | Descrição | Obrigatória |
-|----------|-----------|-------------|
-| `DATABASE_URL` | String de conexão do PostgreSQL | Sim |
-| `JWT_SECRET` | Chave secreta para JWT | Sim |
-| `NODE_ENV` | Ambiente (production/development) | Não |
+| Variável | Descrição | Obrigatória | Quando usar |
+|----------|-----------|-------------|-------------|
+| `DATABASE_URL` | String de conexão do PostgreSQL | Sim | Sempre |
+| `POSTGRES_URL` | String de conexão do PostgreSQL (alternativa) | Não | Com Prisma Accelerate |
+| `PRISMA_DATABASE_URL` | URL do Prisma Accelerate | Não | Com Prisma Accelerate |
+| `JWT_SECRET` | Chave secreta para JWT | Sim | Sempre |
+| `NODE_ENV` | Ambiente (production/development) | Não | Recomendado |
+
+### Prisma Accelerate
+
+O projeto suporta Prisma Accelerate para melhor performance. Quando configurado:
+- Use `PRISMA_DATABASE_URL` com o formato `prisma+postgres://...`
+- O código detecta automaticamente e usa o Accelerate
+- Melhora a latência e reduz conexões ao banco
 
 ## Suporte
 

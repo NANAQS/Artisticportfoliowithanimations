@@ -3,12 +3,30 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
 import bcrypt from 'bcryptjs'
 
-const connectionString = process.env.DATABASE_URL!
+// Detectar se está usando Prisma Accelerate
+const isAccelerate = 
+  process.env.PRISMA_DATABASE_URL?.startsWith('prisma+') ||
+  process.env.DATABASE_URL?.startsWith('prisma+')
 
-const pool = new pg.Pool({ connectionString })
-const adapter = new PrismaPg(pool)
+let prisma: PrismaClient
 
-const prisma = new PrismaClient({ adapter })
+if (isAccelerate) {
+  // Usar Prisma Accelerate (não precisa de adapter)
+  const connectionString = process.env.PRISMA_DATABASE_URL || process.env.DATABASE_URL!
+  prisma = new PrismaClient({
+    datasources: {
+      db: {
+        url: connectionString,
+      },
+    },
+  })
+} else {
+  // Usar conexão direta com PostgreSQL
+  const connectionString = process.env.DATABASE_URL!
+  const pool = new pg.Pool({ connectionString })
+  const adapter = new PrismaPg(pool)
+  prisma = new PrismaClient({ adapter })
+}
 
 async function main() {
   console.log('🌱 Iniciando seed do banco de dados...')
