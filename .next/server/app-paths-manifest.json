@@ -1,7 +1,26 @@
 {
+  "/api/about/route": "app/api/about/route.js",
+  "/api/ad-banners/route": "app/api/ad-banners/route.js",
+  "/api/artworks/route": "app/api/artworks/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/auth/logout/route": "app/api/auth/logout/route.js",
+  "/api/auth/verify/route": "app/api/auth/verify/route.js",
+  "/api/contact/route": "app/api/contact/route.js",
+  "/api/hello-world/route": "app/api/hello-world/route.js",
+  "/api/social-links/route": "app/api/social-links/route.js",
+  "/api/testimonials/route": "app/api/testimonials/route.js",
   "/api/visits/route": "app/api/visits/route.js",
+  "/api/visits/track/route": "app/api/visits/track/route.js",
   "/page": "app/page.js",
-  "/dashboard/testimonials/page": "app/dashboard/testimonials/page.js",
+  "/dashboard/about/page": "app/dashboard/about/page.js",
+  "/dashboard/ad-banners/page": "app/dashboard/ad-banners/page.js",
+  "/dashboard/carousel/page": "app/dashboard/carousel/page.js",
+  "/dashboard/contact/page": "app/dashboard/contact/page.js",
+  "/dashboard/gallery/page": "app/dashboard/gallery/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/scroll/page": "app/dashboard/scroll/page.js",
   "/dashboard/skills/page": "app/dashboard/skills/page.js",
-  "/dashboard/page": "app/dashboard/page.js"
+  "/dashboard/testimonials/page": "app/dashboard/testimonials/page.js",
+  "/dashboard/login/page": "app/dashboard/login/page.js"
 }

@@ -9,6 +9,7 @@ const isAccelerate =
   process.env.DATABASE_URL?.startsWith('prisma+')
 
 let prisma: PrismaClient
+let pool: pg.Pool | null = null
 
 if (isAccelerate) {
   // Usar Prisma Accelerate (não precisa de adapter)
@@ -17,7 +18,7 @@ if (isAccelerate) {
 } else {
   // Usar conexão direta com PostgreSQL
   const connectionString = process.env.DATABASE_URL!
-  const pool = new pg.Pool({ connectionString })
+  pool = new pg.Pool({ connectionString })
   const adapter = new PrismaPg(pool)
   prisma = new PrismaClient({ adapter })
 }
@@ -282,6 +283,8 @@ main()
     process.exit(1)
   })
   .finally(async () => {
-    await pool.end()
+    if (pool) {
+      await pool.end()
+    }
     await prisma.$disconnect()
   })
