@@ -2,6 +2,74 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 
+// Função para calcular menções de uma skill baseado nos depoimentos
+async function calculateSkillMentions(skillName: string): Promise<number> {
+  const testimonials = await prisma.testimonial.findMany({
+    where: {
+      skillsHighlighted: {
+        has: skillName
+      }
+    }
+  })
+  return testimonials.length
+}
+
+// Função para calcular nível baseado em menções
+// Fórmula: min(100, mentions * 10) - cada menção adiciona 10% até máximo de 100%
+function calculateSkillLevel(mentions: number): number {
+  return Math.min(100, mentions * 10)
+}
+
+// Função para recalcular todas as skills baseado nos depoimentos
+async function recalculateAllSkills() {
+  try {
+    // Buscar todas as skills
+    const allSkills = await prisma.skill.findMany()
+    
+    // Para cada skill, recalcular menções e nível
+    for (const skill of allSkills) {
+      const mentions = await calculateSkillMentions(skill.name)
+      const level = calculateSkillLevel(mentions)
+      
+      await prisma.skill.update({
+        where: { id: skill.id },
+        data: {
+          mentions,
+          level,
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Erro ao recalcular skills:', error)
+  }
+}
+
+// Função para recalcular skills específicas
+async function recalculateSkills(skillNames: string[]) {
+  try {
+    for (const skillName of skillNames) {
+      const skill = await prisma.skill.findUnique({
+        where: { name: skillName }
+      })
+      
+      if (skill) {
+        const mentions = await calculateSkillMentions(skillName)
+        const level = calculateSkillLevel(mentions)
+        
+        await prisma.skill.update({
+          where: { id: skill.id },
+          data: {
+            mentions,
+            level,
+          }
+        })
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao recalcular skills específicas:', error)
+  }
+}
+
 // GET - Buscar testimonials e skills
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -104,6 +172,24 @@ export async function POST(request: Request) {
         )
       }
 
+      // Criar skills que não existem automaticamente
+      for (const skillName of data.skillsHighlighted) {
+        const existingSkill = await prisma.skill.findUnique({
+          where: { name: skillName }
+        })
+        
+        if (!existingSkill) {
+          // Criar skill automaticamente com nível e menções iniciais
+          await prisma.skill.create({
+            data: {
+              name: skillName,
+              level: 0, // Será recalculado abaixo
+              mentions: 0, // Será recalculado abaixo
+            }
+          })
+        }
+      }
+
       const newTestimonial = await prisma.testimonial.create({
         data: {
           name: data.name,
@@ -115,6 +201,9 @@ export async function POST(request: Request) {
         }
       })
       
+      // Recalcular menções e níveis das skills mencionadas
+      await recalculateSkills(data.skillsHighlighted)
+      
       return NextResponse.json({
         message: 'Testimonial criado com sucesso',
         data: newTestimonial,
@@ -123,34 +212,60 @@ export async function POST(request: Request) {
 
     if (type === 'skills') {
       // Validar campos obrigatórios
-      if (!data.name || data.level === undefined || data.mentions === undefined) {
+      if (!data.name) {
         return NextResponse.json(
-          { error: 'Campos obrigatórios: name, level, mentions' },
+          { error: 'Campo obrigatório: name' },
           { status: 400 }
         )
       }
 
-      // Validar level
-      if (data.level < 0 || data.level > 100) {
+      // Verificar se skill já existe
+      const existingSkill = await prisma.skill.findUnique({
+        where: { name: data.name }
+      })
+
+      if (existingSkill) {
         return NextResponse.json(
-          { error: 'Level deve ser entre 0 e 100' },
+          { error: 'Esta skill já existe' },
           { status: 400 }
         )
       }
 
-      // Validar mentions
-      if (data.mentions < 0) {
-        return NextResponse.json(
-          { error: 'Mentions deve ser maior ou igual a 0' },
-          { status: 400 }
-        )
+      // Calcular menções e nível automaticamente
+      // Se for uma nova skill criada no contexto de um depoimento, começa com 0
+      // Caso contrário, calcula baseado nos depoimentos existentes
+      let mentions = 0
+      let level = 0
+
+      // Se level e mentions foram fornecidos (criação manual), usar esses valores
+      // Caso contrário, calcular automaticamente
+      if (data.level !== undefined && data.mentions !== undefined) {
+        // Validação se valores foram fornecidos
+        if (data.level < 0 || data.level > 100) {
+          return NextResponse.json(
+            { error: 'Level deve ser entre 0 e 100' },
+            { status: 400 }
+          )
+        }
+        if (data.mentions < 0) {
+          return NextResponse.json(
+            { error: 'Mentions deve ser maior ou igual a 0' },
+            { status: 400 }
+          )
+        }
+        mentions = data.mentions
+        level = data.level
+      } else {
+        // Calcular automaticamente baseado nos depoimentos
+        mentions = await calculateSkillMentions(data.name)
+        level = calculateSkillLevel(mentions)
       }
 
       const newSkill = await prisma.skill.create({
         data: {
           name: data.name,
-          level: data.level,
-          mentions: data.mentions,
+          level,
+          mentions,
         }
       })
       
@@ -195,6 +310,31 @@ export async function PUT(request: Request) {
     }
 
     if (type === 'testimonials') {
+      // Buscar testimonial antigo para comparar skills
+      const oldTestimonial = await prisma.testimonial.findUnique({
+        where: { id }
+      })
+
+      // Criar skills que não existem automaticamente (se skillsHighlighted foi fornecido)
+      if (data.skillsHighlighted && Array.isArray(data.skillsHighlighted)) {
+        for (const skillName of data.skillsHighlighted) {
+          const existingSkill = await prisma.skill.findUnique({
+            where: { name: skillName }
+          })
+          
+          if (!existingSkill) {
+            // Criar skill automaticamente
+            await prisma.skill.create({
+              data: {
+                name: skillName,
+                level: 0, // Será recalculado abaixo
+                mentions: 0, // Será recalculado abaixo
+              }
+            })
+          }
+        }
+      }
+
       const updatedTestimonial = await prisma.testimonial.update({
         where: { id },
         data: {
@@ -206,6 +346,17 @@ export async function PUT(request: Request) {
           ...(data.skillsHighlighted && { skillsHighlighted: data.skillsHighlighted }),
         }
       })
+
+      // Recalcular skills afetadas (antigas e novas)
+      if (data.skillsHighlighted && oldTestimonial) {
+        const oldSkills = oldTestimonial.skillsHighlighted || []
+        const newSkills = data.skillsHighlighted
+        const allAffectedSkills = [...new Set([...oldSkills, ...newSkills])]
+        await recalculateSkills(allAffectedSkills)
+      } else if (data.skillsHighlighted) {
+        await recalculateSkills(data.skillsHighlighted)
+      }
+
       return NextResponse.json({
         message: 'Testimonial atualizado com sucesso',
         data: updatedTestimonial,
@@ -265,9 +416,20 @@ export async function DELETE(request: Request) {
     const itemId = parseInt(id)
 
     if (type === 'testimonials') {
+      // Buscar testimonial antes de deletar para recalcular skills
+      const testimonial = await prisma.testimonial.findUnique({
+        where: { id: itemId }
+      })
+
       await prisma.testimonial.delete({
         where: { id: itemId }
       })
+
+      // Recalcular skills que estavam no depoimento deletado
+      if (testimonial && testimonial.skillsHighlighted) {
+        await recalculateSkills(testimonial.skillsHighlighted)
+      }
+
       return NextResponse.json({ message: 'Testimonial deletado com sucesso' })
     }
 

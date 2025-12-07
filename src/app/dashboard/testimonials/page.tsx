@@ -47,8 +47,6 @@ export default function TestimonialsPage() {
 
   const [skillFormData, setSkillFormData] = useState({
     name: '',
-    level: 50,
-    mentions: 0,
   })
 
   useEffect(() => {
@@ -135,8 +133,7 @@ export default function TestimonialsPage() {
         body: JSON.stringify({
           type: 'skills',
           name: skillFormData.name,
-          level: skillFormData.level,
-          mentions: skillFormData.mentions,
+          // level e mentions serão calculados automaticamente
         })
       })
 
@@ -148,9 +145,9 @@ export default function TestimonialsPage() {
       }
 
       const newSkillName = skillFormData.name
-      setMessage({ type: 'success', text: 'Skill criada com sucesso!' })
+      setMessage({ type: 'success', text: 'Skill criada com sucesso! Nível e menções serão calculados automaticamente.' })
       setIsSkillModalOpen(false)
-      setSkillFormData({ name: '', level: 50, mentions: 0 })
+      setSkillFormData({ name: '' })
       await loadSkills()
       
       // Adicionar a nova skill automaticamente aos selecionados
@@ -559,39 +556,18 @@ export default function TestimonialsPage() {
 
               <form onSubmit={handleCreateSkill} className="space-y-4">
                 <div>
-                  <label className="block text-gray-300 text-sm mb-2">Nome</label>
+                  <label className="block text-gray-300 text-sm mb-2">Nome da Skill</label>
                   <input
                     type="text"
                     value={skillFormData.name}
                     onChange={(e) => setSkillFormData({ ...skillFormData, name: e.target.value })}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500"
+                    placeholder="Ex: React, TypeScript, Design..."
                     required
                   />
-                </div>
-
-                <div>
-                  <label className="block text-gray-300 text-sm mb-2">Nível (0-100)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={skillFormData.level}
-                    onChange={(e) => setSkillFormData({ ...skillFormData, level: parseInt(e.target.value) })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-300 text-sm mb-2">Menções Iniciais</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={skillFormData.mentions}
-                    onChange={(e) => setSkillFormData({ ...skillFormData, mentions: parseInt(e.target.value) })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500"
-                    required
-                  />
+                  <p className="mt-2 text-xs text-gray-400">
+                    O nível e as menções serão calculados automaticamente baseado nos depoimentos.
+                  </p>
                 </div>
 
                 <div className="flex gap-3 pt-4">
