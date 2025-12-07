@@ -14,28 +14,41 @@ async function calculateSkillMentions(skillName: string): Promise<number> {
   return testimonials.length
 }
 
-// Função para calcular nível baseado em menções
-// Fórmula: min(100, mentions * 10) - cada menção adiciona 10% até máximo de 100%
-function calculateSkillLevel(mentions: number): number {
-  return Math.min(100, mentions * 10)
+// Função para atualizar nível de skill baseado no depoimento mais recente
+// O nível vem do depoimento, não é calculado
+async function updateSkillLevel(skillName: string, level: number) {
+  try {
+    const skill = await prisma.skill.findUnique({
+      where: { name: skillName }
+    })
+    
+    if (skill) {
+      await prisma.skill.update({
+        where: { id: skill.id },
+        data: { level }
+      })
+    }
+  } catch (error) {
+    console.error(`Erro ao atualizar nível da skill ${skillName}:`, error)
+  }
 }
 
 // Função para recalcular todas as skills baseado nos depoimentos
+// Apenas recalcula menções (nível vem dos depoimentos)
 async function recalculateAllSkills() {
   try {
     // Buscar todas as skills
     const allSkills = await prisma.skill.findMany()
     
-    // Para cada skill, recalcular menções e nível
+    // Para cada skill, recalcular apenas menções
     for (const skill of allSkills) {
       const mentions = await calculateSkillMentions(skill.name)
-      const level = calculateSkillLevel(mentions)
       
       await prisma.skill.update({
         where: { id: skill.id },
         data: {
           mentions,
-          level,
+          // Nível não é alterado aqui, vem dos depoimentos
         }
       })
     }
@@ -44,8 +57,9 @@ async function recalculateAllSkills() {
   }
 }
 
-// Função para recalcular skills específicas
-async function recalculateSkills(skillNames: string[]) {
+// Função para recalcular menções de skills específicas
+// Nível não é recalculado aqui, vem dos depoimentos
+async function recalculateSkillMentions(skillNames: string[]) {
   try {
     for (const skillName of skillNames) {
       const skill = await prisma.skill.findUnique({
@@ -54,19 +68,18 @@ async function recalculateSkills(skillNames: string[]) {
       
       if (skill) {
         const mentions = await calculateSkillMentions(skillName)
-        const level = calculateSkillLevel(mentions)
         
         await prisma.skill.update({
           where: { id: skill.id },
           data: {
             mentions,
-            level,
+            // Nível não é alterado aqui, vem dos depoimentos
           }
         })
       }
     }
   } catch (error) {
-    console.error('Erro ao recalcular skills específicas:', error)
+    console.error('Erro ao recalcular menções de skills:', error)
   }
 }
 
@@ -172,6 +185,9 @@ export async function POST(request: Request) {
         )
       }
 
+      // Validar skillLevels se fornecido
+      const skillLevels = data.skillLevels || {}
+      
       // Criar skills que não existem automaticamente
       for (const skillName of data.skillsHighlighted) {
         const existingSkill = await prisma.skill.findUnique({
@@ -179,14 +195,19 @@ export async function POST(request: Request) {
         })
         
         if (!existingSkill) {
-          // Criar skill automaticamente com nível e menções iniciais
+          // Criar skill automaticamente com nível do depoimento ou padrão 50
+          const level = skillLevels[skillName] || 50
           await prisma.skill.create({
             data: {
               name: skillName,
-              level: 0, // Será recalculado abaixo
+              level,
               mentions: 0, // Será recalculado abaixo
             }
           })
+        } else {
+          // Atualizar nível da skill com o valor do depoimento
+          const level = skillLevels[skillName] !== undefined ? skillLevels[skillName] : existingSkill.level
+          await updateSkillLevel(skillName, level)
         }
       }
 
@@ -201,8 +222,8 @@ export async function POST(request: Request) {
         }
       })
       
-      // Recalcular menções e níveis das skills mencionadas
-      await recalculateSkills(data.skillsHighlighted)
+      // Recalcular apenas menções das skills mencionadas (nível já foi atualizado acima)
+      await recalculateSkillMentions(data.skillsHighlighted)
       
       return NextResponse.json({
         message: 'Testimonial criado com sucesso',
@@ -256,9 +277,10 @@ export async function POST(request: Request) {
         mentions = data.mentions
         level = data.level
       } else {
-        // Calcular automaticamente baseado nos depoimentos
+        // Calcular apenas menções automaticamente baseado nos depoimentos
         mentions = await calculateSkillMentions(data.name)
-        level = calculateSkillLevel(mentions)
+        // Nível não é calculado automaticamente, deve ser definido no depoimento
+        level = 50 // Valor padrão
       }
 
       const newSkill = await prisma.skill.create({
@@ -315,6 +337,9 @@ export async function PUT(request: Request) {
         where: { id }
       })
 
+      // Validar skillLevels se fornecido
+      const skillLevels = data.skillLevels || {}
+      
       // Criar skills que não existem automaticamente (se skillsHighlighted foi fornecido)
       if (data.skillsHighlighted && Array.isArray(data.skillsHighlighted)) {
         for (const skillName of data.skillsHighlighted) {
@@ -323,14 +348,19 @@ export async function PUT(request: Request) {
           })
           
           if (!existingSkill) {
-            // Criar skill automaticamente
+            // Criar skill automaticamente com nível do depoimento ou padrão 50
+            const level = skillLevels[skillName] || 50
             await prisma.skill.create({
               data: {
                 name: skillName,
-                level: 0, // Será recalculado abaixo
+                level,
                 mentions: 0, // Será recalculado abaixo
               }
             })
+          } else {
+            // Atualizar nível da skill com o valor do depoimento
+            const level = skillLevels[skillName] !== undefined ? skillLevels[skillName] : existingSkill.level
+            await updateSkillLevel(skillName, level)
           }
         }
       }
@@ -347,14 +377,14 @@ export async function PUT(request: Request) {
         }
       })
 
-      // Recalcular skills afetadas (antigas e novas)
+      // Recalcular apenas menções das skills afetadas (nível já foi atualizado acima)
       if (data.skillsHighlighted && oldTestimonial) {
         const oldSkills = oldTestimonial.skillsHighlighted || []
         const newSkills = data.skillsHighlighted
         const allAffectedSkills = [...new Set([...oldSkills, ...newSkills])]
-        await recalculateSkills(allAffectedSkills)
+        await recalculateSkillMentions(allAffectedSkills)
       } else if (data.skillsHighlighted) {
-        await recalculateSkills(data.skillsHighlighted)
+        await recalculateSkillMentions(data.skillsHighlighted)
       }
 
       return NextResponse.json({
@@ -425,9 +455,9 @@ export async function DELETE(request: Request) {
         where: { id: itemId }
       })
 
-      // Recalcular skills que estavam no depoimento deletado
+      // Recalcular apenas menções das skills que estavam no depoimento deletado
       if (testimonial && testimonial.skillsHighlighted) {
-        await recalculateSkills(testimonial.skillsHighlighted)
+        await recalculateSkillMentions(testimonial.skillsHighlighted)
       }
 
       return NextResponse.json({ message: 'Testimonial deletado com sucesso' })

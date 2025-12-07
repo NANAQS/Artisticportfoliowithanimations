@@ -33,7 +33,7 @@ export default function TestimonialsPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [isSavingSkill, setIsSavingSkill] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([])
+  const [selectedSkills, setSelectedSkills] = useState<Array<{ name: string; level: number }>>([])
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -109,15 +109,32 @@ export default function TestimonialsPage() {
       text: testimonial.text,
       rating: testimonial.rating,
     })
-    setSelectedSkills(testimonial.skillsHighlighted)
+    // Converter skillsHighlighted (string[]) para formato com nível
+    // Buscar níveis atuais das skills
+    const skillsWithLevel = testimonial.skillsHighlighted.map(skillName => {
+      const skill = skills.find(s => s.name === skillName)
+      return { name: skillName, level: skill?.level || 50 }
+    })
+    setSelectedSkills(skillsWithLevel)
     setIsModalOpen(true)
   }
 
   function toggleSkill(skillName: string) {
-    setSelectedSkills(prev => 
-      prev.includes(skillName)
-        ? prev.filter(s => s !== skillName)
-        : [...prev, skillName]
+    setSelectedSkills(prev => {
+      const exists = prev.find(s => s.name === skillName)
+      if (exists) {
+        return prev.filter(s => s.name !== skillName)
+      } else {
+        // Buscar nível atual da skill ou usar 50 como padrão
+        const skill = skills.find(s => s.name === skillName)
+        return [...prev, { name: skillName, level: skill?.level || 50 }]
+      }
+    })
+  }
+
+  function updateSkillLevel(skillName: string, level: number) {
+    setSelectedSkills(prev =>
+      prev.map(s => s.name === skillName ? { ...s, level } : s)
     )
   }
 
@@ -145,13 +162,13 @@ export default function TestimonialsPage() {
       }
 
       const newSkillName = skillFormData.name
-      setMessage({ type: 'success', text: 'Skill criada com sucesso! Nível e menções serão calculados automaticamente.' })
+      setMessage({ type: 'success', text: 'Skill criada com sucesso! Defina o nível no depoimento.' })
       setIsSkillModalOpen(false)
       setSkillFormData({ name: '' })
       await loadSkills()
       
-      // Adicionar a nova skill automaticamente aos selecionados
-      setSelectedSkills(prev => [...prev, newSkillName])
+      // Adicionar a nova skill automaticamente aos selecionados com nível padrão
+      setSelectedSkills(prev => [...prev, { name: newSkillName, level: 50 }])
     } catch {
       setMessage({ type: 'error', text: 'Erro ao criar skill' })
     } finally {
@@ -182,7 +199,11 @@ export default function TestimonialsPage() {
             image: formData.image,
             text: formData.text,
             rating: formData.rating,
-            skillsHighlighted: selectedSkills,
+            skillsHighlighted: selectedSkills.map(s => s.name),
+            skillLevels: selectedSkills.reduce((acc, s) => {
+              acc[s.name] = s.level
+              return acc
+            }, {} as Record<string, number>),
           }
         : {
             type: 'testimonials',
@@ -191,7 +212,11 @@ export default function TestimonialsPage() {
             image: formData.image,
             text: formData.text,
             rating: formData.rating,
-            skillsHighlighted: selectedSkills,
+            skillsHighlighted: selectedSkills.map(s => s.name),
+            skillLevels: selectedSkills.reduce((acc, s) => {
+              acc[s.name] = s.level
+              return acc
+            }, {} as Record<string, number>),
           }
 
       const res = await fetch(url, {
@@ -471,12 +496,12 @@ export default function TestimonialsPage() {
                               >
                                 <input
                                   type="checkbox"
-                                  checked={selectedSkills.includes(skill.name)}
+                                  checked={selectedSkills.some(s => s.name === skill.name)}
                                   onChange={() => toggleSkill(skill.name)}
                                   className="w-4 h-4 rounded border-white/20 bg-white/5 text-purple-500 focus:ring-purple-500"
                                 />
                                 <span className="text-white text-sm flex-1">{skill.name}</span>
-                                <span className="text-gray-400 text-xs">{skill.level}%</span>
+                                <span className="text-gray-400 text-xs">{skill.mentions} menções</span>
                               </label>
                             ))
                           )}
@@ -486,21 +511,40 @@ export default function TestimonialsPage() {
                   </div>
                   
                   {selectedSkills.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {selectedSkills.map((skillName) => (
-                        <span
-                          key={skillName}
-                          className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-lg flex items-center gap-2"
+                    <div className="space-y-3 mt-3">
+                      {selectedSkills.map((skill) => (
+                        <div
+                          key={skill.name}
+                          className="p-3 bg-white/5 border border-white/10 rounded-lg"
                         >
-                          {skillName}
-                          <button
-                            type="button"
-                            onClick={() => toggleSkill(skillName)}
-                            className="hover:text-red-400"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </span>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-white text-sm font-medium">{skill.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => toggleSkill(skill.name)}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div>
+                            <label className="block text-gray-300 text-xs mb-1">
+                              Nível: {skill.level}%
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={skill.level}
+                              onChange={(e) => updateSkillLevel(skill.name, parseInt(e.target.value))}
+                              className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                            />
+                            <div className="flex justify-between text-xs text-gray-400 mt-1">
+                              <span>0%</span>
+                              <span>100%</span>
+                            </div>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}
