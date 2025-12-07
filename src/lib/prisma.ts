@@ -69,8 +69,31 @@ const prismaProxy = new Proxy({} as PrismaClient, {
         if (!prismaUrl || prismaUrl.trim() === '') {
           const errorMsg = 'PRISMA_DATABASE_URL ou DATABASE_URL não está configurada. Configure a variável de ambiente na Vercel: Settings > Environment Variables'
           console.error('❌', errorMsg)
-          // Na Vercel/produção, tentar criar mesmo assim (pode falhar em runtime)
-          // Mas vamos tentar para não quebrar o build
+          // Criar um objeto mock que retorna promises rejeitadas quando métodos são chamados
+          // Mas não lança erro imediatamente - apenas quando o método é chamado
+          const mockPrisma = {} as any
+          // Criar um handler que retorna funções que lançam erro apenas quando chamadas
+          const handler = {
+            get: (_target: any, propName: string) => {
+              // Para propriedades especiais, retornar valores padrão
+              if (propName === '$connect' || propName === '$disconnect') {
+                return async () => {}
+              }
+              // Para modelos (visit, user, etc), retornar um objeto com métodos que lançam erro
+              return new Proxy({}, {
+                get: () => {
+                  return () => Promise.reject(new Error('Prisma Client não inicializado. Configure DATABASE_URL na Vercel: Settings > Environment Variables'))
+                }
+              })
+            }
+          }
+          globalForPrisma.prisma = new Proxy(mockPrisma, handler) as PrismaClient
+          // Retornar o valor do proxy mock
+          const mockValue = (globalForPrisma.prisma as any)[prop]
+          if (typeof mockValue === 'function') {
+            return mockValue.bind(globalForPrisma.prisma)
+          }
+          return mockValue
         } else {
           console.log('✅ Variável de ambiente encontrada, criando Prisma Client...')
         }
@@ -88,8 +111,23 @@ const prismaProxy = new Proxy({} as PrismaClient, {
         } catch (fallbackError: any) {
           console.error('❌ Erro ao criar PrismaClient fallback:', fallbackError?.message || fallbackError)
           console.error('Stack:', fallbackError?.stack)
-          const errorMsg = 'Não foi possível inicializar o Prisma Client. Verifique se a variável de ambiente DATABASE_URL está configurada na Vercel com o valor: prisma+postgres://accelerate.prisma-data.net/?api_key=...'
-          throw new Error(errorMsg)
+          // Criar um objeto mock que retorna promises rejeitadas quando métodos são chamados
+          const createMockPrisma = () => {
+            const mockError = new Error('Prisma Client não inicializado. Configure DATABASE_URL na Vercel: Settings > Environment Variables')
+            return new Proxy({} as PrismaClient, {
+              get: (_target, propName) => {
+                if (propName === '$connect' || propName === '$disconnect') {
+                  return async () => {}
+                }
+                // Para modelos, retornar um objeto com métodos que retornam promises rejeitadas
+                return new Proxy({}, {
+                  get: () => () => Promise.reject(mockError)
+                })
+              }
+            })
+          }
+          globalForPrisma.prisma = createMockPrisma()
+          console.warn('⚠️  Prisma Client não inicializado. As operações de banco falharão até que DATABASE_URL seja configurada.')
         }
       }
     }

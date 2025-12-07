@@ -52,28 +52,38 @@ export async function POST(request: Request) {
     }
 
     // Registrar visita no banco diretamente
-    const visit = await prisma.visit.create({
-      data: {
-        ip,
-        userAgent,
-        path: body.path || '/',
-        referer: body.referer || null,
-        country: geoData.country,
-        region: geoData.region,
-        city: geoData.city,
-        latitude: geoData.latitude,
-        longitude: geoData.longitude,
-        timezone: geoData.timezone,
+    try {
+      const visit = await prisma.visit.create({
+        data: {
+          ip,
+          userAgent,
+          path: body.path || '/',
+          referer: body.referer || null,
+          country: geoData.country,
+          region: geoData.region,
+          city: geoData.city,
+          latitude: geoData.latitude,
+          longitude: geoData.longitude,
+          timezone: geoData.timezone,
+        }
+      })
+    } catch (dbError: any) {
+      // Se o erro for relacionado à inicialização do Prisma, logar mas continuar
+      if (dbError?.message?.includes('Prisma Client') || dbError?.message?.includes('DATABASE_URL')) {
+        console.error('⚠️  Erro de banco de dados (variável de ambiente não configurada):', dbError.message)
+      } else {
+        console.error('Erro ao salvar visita no banco:', dbError)
       }
-    })
+      // Continuar mesmo com erro - não quebrar a experiência do usuário
+    }
 
     return NextResponse.json({ 
       success: true,
       ip,
       geoData 
     })
-  } catch (error) {
-    console.error('Erro ao rastrear visita:', error)
+  } catch (error: any) {
+    console.error('Erro ao rastrear visita:', error?.message || error)
     // Retornar sucesso mesmo com erro para não quebrar a experiência do usuário
     return NextResponse.json({ 
       success: true,
