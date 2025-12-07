@@ -113,7 +113,10 @@ async function migrateData() {
     for (const testimonial of testimonials) {
       const { id, ...data } = testimonial
       await prodPrisma.testimonial.create({
-        data,
+        data: {
+          ...data,
+          skillsHighlighted: data.skillsHighlighted as any,
+        },
       })
     }
     console.log(`✅ ${testimonials.length} depoimentos migrados\n`)
@@ -127,7 +130,6 @@ async function migrateData() {
         const batch = visits.slice(i, i + batchSize)
         await prodPrisma.visit.createMany({
           data: batch.map(({ id, ...data }) => data),
-          skipDuplicates: true,
         })
       }
       console.log(`✅ ${visits.length} visitas migradas\n`)

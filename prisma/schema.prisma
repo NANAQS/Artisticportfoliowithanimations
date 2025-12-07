@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 model User {
@@ -63,7 +63,7 @@ model Testimonial {
   image             String
   text              String
   rating            Int
-  skillsHighlighted String[]
+  skillsHighlighted Json // Array de strings - SQLite não suporta arrays nativos
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -129,8 +129,8 @@ model AboutConfig {
   id          Int      @id @default(autoincrement())
   title       String
   subtitle    String
-  description String   @db.Text
-  paragraph2  String?  @db.Text
+  description String
+  paragraph2  String?
   image       String
   skills      Json     // Array de objetos { icon: string, title: string, description: string }
   createdAt   DateTime @default(now())

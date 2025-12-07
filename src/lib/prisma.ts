@@ -1,6 +1,4 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
-import pg from 'pg'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -33,29 +31,10 @@ function createPrismaClient(): PrismaClient {
     }
   }
 
-  const isAccelerate = prismaUrl?.startsWith('prisma+') || false
-  const isLocalDev = !isVercel && !isProduction && process.env.DATABASE_URL && !isAccelerate
-
-  if (isLocalDev) {
-    // Usar conexão direta com PostgreSQL apenas em desenvolvimento local (sem Accelerate)
-    try {
-      const connectionString = process.env.DATABASE_URL
-      if (!connectionString || connectionString.trim() === '') {
-        throw new Error('DATABASE_URL está vazia')
-      }
-      const pool = new pg.Pool({ connectionString })
-      const adapter = new PrismaPg(pool)
-      return new PrismaClient({ adapter })
-    } catch (error) {
-      console.warn('⚠️  Erro ao criar pool PostgreSQL, usando PrismaClient padrão:', error)
-      return new PrismaClient()
-    }
-  } else {
-    // Na Vercel, produção ou com Prisma Accelerate
-    // O Prisma Client lê automaticamente PRISMA_DATABASE_URL ou DATABASE_URL
-    // Não precisa passar nada no construtor - ele lê das variáveis de ambiente
-    return new PrismaClient()
-  }
+  // SQLite não precisa de adapters ou configurações especiais
+  // O Prisma Client lê automaticamente DATABASE_URL do schema.prisma
+  // Para SQLite, a URL deve ser: file:./dev.db (local) ou libsql://... (Turso)
+  return new PrismaClient()
 }
 
 // Proxy para inicialização verdadeiramente lazy
