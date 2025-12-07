@@ -46,15 +46,6 @@ export default function LoginPage() {
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl" />
       </div>
-      <div className="fixed top-6 right-6 z-50 bg-black/70 text-white px-6 py-4 rounded-2xl shadow-xl backdrop-blur-md flex flex-col items-start gap-1">
-        <span className="font-semibold">Demo Admin</span>
-        <span>
-          <b>Email:</b> admin@portfolio.com
-        </span>
-        <span>
-          <b>Senha:</b> admin123
-        </span>
-      </div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

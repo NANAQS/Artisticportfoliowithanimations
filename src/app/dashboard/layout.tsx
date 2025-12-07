@@ -5,7 +5,8 @@ import { useRouter, usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   Palette, LogOut, Grid, Rows, Image, ImageIcon, Users, Star,
-  BarChart3, Menu, X, ChevronDown, ChevronRight, Settings, FileText, Mail, User
+  BarChart3, Menu, X, ChevronDown, ChevronRight, Settings, FileText, Mail, User,
+  Shield, Key, Clock
 } from 'lucide-react'
 import LoginPage from './login/page'
 
@@ -34,7 +35,7 @@ export default function DashboardLayout({
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set(['conteudo', 'configuracao']))
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set(['conteudo', 'configuracao', 'seguranca']))
 
   const menuItems: MenuItem[] = [
     { id: 'overview', label: 'Visão Geral', icon: BarChart3, path: '/dashboard' },
@@ -58,6 +59,15 @@ export default function DashboardLayout({
         { id: 'skills', label: 'Skills', icon: Star, path: '/dashboard/skills' },
         { id: 'contact', label: 'Contato', icon: Mail, path: '/dashboard/contact' },
         { id: 'ad-banners', label: 'Anúncios', icon: ImageIcon, path: '/dashboard/ad-banners' },
+      ]
+    },
+    {
+      id: 'seguranca',
+      label: 'Segurança',
+      icon: Shield,
+      children: [
+        { id: 'credentials', label: 'Credenciais', icon: Key, path: '/dashboard/credentials' },
+        { id: 'history', label: 'Histórico de Acessos', icon: Clock, path: '/dashboard/history' },
       ]
     },
   ]

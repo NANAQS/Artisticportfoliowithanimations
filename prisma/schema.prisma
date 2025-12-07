@@ -154,3 +154,18 @@ model AdBanner {
   @@index([targetElement, position, order])
   @@index([isActive])
 }
+
+model LoginHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  email     String
+  ip        String?
+  userAgent String?
+  success   Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("login_history")
+  @@index([userId])
+  @@index([createdAt])
+  @@index([email])
+}
