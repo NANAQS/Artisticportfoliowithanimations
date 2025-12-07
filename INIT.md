@@ -93,3 +93,4 @@ Certifique-se de ter configurado na Vercel:
 - Configure `INIT_SECRET` na Vercel com uma chave forte
 - Após a inicialização, considere desabilitar ou proteger ainda mais este endpoint
 
+
