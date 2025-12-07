@@ -52,9 +52,32 @@ function createPrismaClient(): PrismaClient {
     }
   } else {
     // Na Vercel, produção ou com Prisma Accelerate
-    // O Prisma Client lê automaticamente PRISMA_DATABASE_URL ou DATABASE_URL
-    // Não precisa passar nada no construtor - ele lê das variáveis de ambiente
-    return new PrismaClient()
+    if (isAccelerate) {
+      // Para Prisma Accelerate, o Prisma Client lê automaticamente PRISMA_DATABASE_URL
+      return new PrismaClient()
+    } else if (prismaUrl) {
+      // Para PostgreSQL direto na Vercel, usar adapter com pool configurado para serverless
+      // Isso evita problemas de conexão em ambientes serverless
+      try {
+        const connectionString = prismaUrl.trim()
+        // Configurar pool para serverless: conexões efêmeras, sem manter pool
+        const pool = new pg.Pool({
+          connectionString,
+          max: 1, // Máximo de 1 conexão por função serverless
+          idleTimeoutMillis: 0, // Não manter conexões idle
+          connectionTimeoutMillis: 10000, // Timeout de 10s
+        })
+        const adapter = new PrismaPg(pool)
+        return new PrismaClient({ adapter })
+      } catch (error) {
+        console.warn('⚠️  Erro ao criar pool PostgreSQL, tentando PrismaClient padrão:', error)
+        // Fallback: tentar sem adapter (pode não funcionar em serverless)
+        return new PrismaClient()
+      }
+    } else {
+      // Sem URL, tentar criar mesmo assim (pode falhar em runtime)
+      return new PrismaClient()
+    }
   }
 }
 
