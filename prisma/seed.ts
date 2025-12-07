@@ -26,25 +26,41 @@ if (isAccelerate) {
 async function main() {
   console.log('🌱 Iniciando seed do banco de dados...')
 
-  // Limpar dados existentes
-  await prisma.user.deleteMany()
-  await prisma.galleryArtwork.deleteMany()
-  await prisma.carouselArtwork.deleteMany()
-  await prisma.scrollContent.deleteMany()
-  await prisma.testimonial.deleteMany()
-  await prisma.skill.deleteMany()
+  const isProduction = process.env.NODE_ENV === 'production'
+  const shouldReset = process.env.RESET_DB === 'true'
 
-  // Criar usuário admin
-  const hashedPassword = await bcrypt.hash('admin123', 12)
-  await prisma.user.create({
-    data: {
-      email: 'admin@portfolio.com',
-      password: hashedPassword,
-      name: 'Admin',
-      role: 'admin'
-    }
+  // Limpar dados existentes apenas se RESET_DB=true ou em desenvolvimento
+  if (shouldReset || !isProduction) {
+    console.log('⚠️  Limpando dados existentes...')
+    await prisma.user.deleteMany()
+    await prisma.galleryArtwork.deleteMany()
+    await prisma.carouselArtwork.deleteMany()
+    await prisma.scrollContent.deleteMany()
+    await prisma.testimonial.deleteMany()
+    await prisma.skill.deleteMany()
+  } else {
+    console.log('ℹ️  Modo produção: verificando se dados já existem...')
+  }
+
+  // Criar usuário admin (apenas se não existir)
+  const existingUser = await prisma.user.findUnique({
+    where: { email: 'admin@portfolio.com' }
   })
-  console.log('✅ Usuário admin criado (admin@portfolio.com / admin123)')
+
+  if (!existingUser) {
+    const hashedPassword = await bcrypt.hash('admin123', 12)
+    await prisma.user.create({
+      data: {
+        email: 'admin@portfolio.com',
+        password: hashedPassword,
+        name: 'Admin',
+        role: 'admin'
+      }
+    })
+    console.log('✅ Usuário admin criado (admin@portfolio.com / admin123)')
+  } else {
+    console.log('ℹ️  Usuário admin já existe')
+  }
 
   // Gallery Artworks
   const galleryArtworks = [
@@ -155,16 +171,21 @@ async function main() {
     },
   ]
 
-  // Criar gallery artworks com ordem
-  for (let i = 0; i < galleryArtworks.length; i++) {
-    await prisma.galleryArtwork.create({
-      data: {
-        ...galleryArtworks[i],
-        order: i,
-      }
-    })
+  // Criar gallery artworks com ordem (apenas se não existirem)
+  const existingGalleryCount = await prisma.galleryArtwork.count()
+  if (existingGalleryCount === 0) {
+    for (let i = 0; i < galleryArtworks.length; i++) {
+      await prisma.galleryArtwork.create({
+        data: {
+          ...galleryArtworks[i],
+          order: i,
+        }
+      })
+    }
+    console.log(`✅ ${galleryArtworks.length} gallery artworks criados`)
+  } else {
+    console.log(`ℹ️  ${existingGalleryCount} gallery artworks já existem`)
   }
-  console.log(`✅ ${galleryArtworks.length} gallery artworks criados`)
 
   // Carousel Artworks
   const carouselArtworks = [
@@ -200,8 +221,13 @@ async function main() {
     },
   ]
 
-  await prisma.carouselArtwork.createMany({ data: carouselArtworks })
-  console.log(`✅ ${carouselArtworks.length} carousel artworks criados`)
+  const existingCarouselCount = await prisma.carouselArtwork.count()
+  if (existingCarouselCount === 0) {
+    await prisma.carouselArtwork.createMany({ data: carouselArtworks })
+    console.log(`✅ ${carouselArtworks.length} carousel artworks criados`)
+  } else {
+    console.log(`ℹ️  ${existingCarouselCount} carousel artworks já existem`)
+  }
 
   // Scroll Content
   const scrollContent = [
@@ -222,8 +248,13 @@ async function main() {
     },
   ]
 
-  await prisma.scrollContent.createMany({ data: scrollContent })
-  console.log(`✅ ${scrollContent.length} scroll content criados`)
+  const existingScrollCount = await prisma.scrollContent.count()
+  if (existingScrollCount === 0) {
+    await prisma.scrollContent.createMany({ data: scrollContent })
+    console.log(`✅ ${scrollContent.length} scroll content criados`)
+  } else {
+    console.log(`ℹ️  ${existingScrollCount} scroll content já existem`)
+  }
 
   // Testimonials
   const testimonials = [
@@ -253,10 +284,15 @@ async function main() {
     },
   ]
 
-  for (const testimonial of testimonials) {
-    await prisma.testimonial.create({ data: testimonial })
+  const existingTestimonialsCount = await prisma.testimonial.count()
+  if (existingTestimonialsCount === 0) {
+    for (const testimonial of testimonials) {
+      await prisma.testimonial.create({ data: testimonial })
+    }
+    console.log(`✅ ${testimonials.length} testimonials criados`)
+  } else {
+    console.log(`ℹ️  ${existingTestimonialsCount} testimonials já existem`)
   }
-  console.log(`✅ ${testimonials.length} testimonials criados`)
 
   // Skills
   const skills = [
@@ -271,20 +307,34 @@ async function main() {
     { name: 'Storyboarding', level: 85, mentions: 1 },
   ]
 
-  await prisma.skill.createMany({ data: skills })
-  console.log(`✅ ${skills.length} skills criadas`)
+  const existingSkillsCount = await prisma.skill.count()
+  if (existingSkillsCount === 0) {
+    await prisma.skill.createMany({ data: skills })
+    console.log(`✅ ${skills.length} skills criadas`)
+  } else {
+    console.log(`ℹ️  ${existingSkillsCount} skills já existem`)
+  }
 
   console.log('🎉 Seed concluído com sucesso!')
 }
 
-main()
-  .catch((e) => {
-    console.error('❌ Erro no seed:', e)
-    process.exit(1)
-  })
-  .finally(async () => {
-    if (pool) {
-      await pool.end()
-    }
-    await prisma.$disconnect()
-  })
+// Exportar a função main para uso em outros lugares
+export { main }
+
+// Executar apenas se for chamado diretamente (não quando importado)
+// Verificar se está sendo executado como script
+const isMainModule = typeof require !== 'undefined' && require.main === module
+
+if (isMainModule) {
+  main()
+    .catch((e) => {
+      console.error('❌ Erro no seed:', e)
+      process.exit(1)
+    })
+    .finally(async () => {
+      if (pool) {
+        await pool.end()
+      }
+      await prisma.$disconnect()
+    })
+}
