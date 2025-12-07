@@ -1,8 +1,27 @@
 import { PrismaClient } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
+import pg from 'pg'
 import bcrypt from 'bcryptjs'
 
-// SQLite não precisa de adapters ou configurações especiais
-const prisma = new PrismaClient()
+// Detectar se está usando Prisma Accelerate
+const isAccelerate = 
+  process.env.PRISMA_DATABASE_URL?.startsWith('prisma+') ||
+  process.env.DATABASE_URL?.startsWith('prisma+')
+
+let prisma: PrismaClient
+let pool: pg.Pool | null = null
+
+if (isAccelerate) {
+  // Usar Prisma Accelerate (não precisa de adapter)
+  // O Prisma Client detecta automaticamente a URL do Accelerate via PRISMA_DATABASE_URL ou DATABASE_URL
+  prisma = new PrismaClient()
+} else {
+  // Usar conexão direta com PostgreSQL
+  const connectionString = process.env.DATABASE_URL!
+  pool = new pg.Pool({ connectionString })
+  const adapter = new PrismaPg(pool)
+  prisma = new PrismaClient({ adapter })
+}
 
 async function main() {
   console.log('🌱 Iniciando seed do banco de dados...')
@@ -245,7 +264,7 @@ async function main() {
       image: 'https://images.unsplash.com/photo-1701958213864-2307a737e853?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMHBhaW50aW5nJTIwYXJ0aXN0aWN8ZW58MXx8fHwxNzYxNzA4MzEzfDA&ixlib=rb-4.1.0&q=80&w=1080',
       text: 'The character designs exceeded all expectations. The attention to detail, anatomy knowledge, and unique artistic style brought our game to life!',
       rating: 5,
-      skillsHighlighted: ['Character Design', 'Digital Painting', 'Anatomy & Form'] as any,
+      skillsHighlighted: ['Character Design', 'Digital Painting', 'Anatomy & Form'],
     },
     {
       name: 'Marcus Chen',
@@ -253,7 +272,7 @@ async function main() {
       image: 'https://images.unsplash.com/photo-1630207831419-3532bcb828d7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaGFyYWN0ZXIlMjBkZXNpZ24lMjBza2V0Y2h8ZW58MXx8fHwxNzYxNzA4MzEyfDA&ixlib=rb-4.1.0&q=80&w=1080',
       text: 'Beautiful book cover illustrations with exceptional composition and color theory. The visual storytelling perfectly captured the essence of my story!',
       rating: 5,
-      skillsHighlighted: ['Illustration Styles', 'Composition', 'Color Theory'] as any,
+      skillsHighlighted: ['Illustration Styles', 'Composition', 'Color Theory'],
     },
     {
       name: 'Emily Rodriguez',
@@ -261,7 +280,7 @@ async function main() {
       image: 'https://images.unsplash.com/photo-1725347740942-c5306e3c970f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaWdpdGFsJTIwaWxsdXN0cmF0aW9uJTIwYXJ0fGVufDF8fHx8MTc2MTY2NTg0Mnww&ixlib=rb-4.1.0&q=80&w=1080',
       text: 'Outstanding concept art and storyboarding that helped us visualize our animated series. Professional workflow with amazing background art!',
       rating: 5,
-      skillsHighlighted: ['Concept Art', 'Storyboarding', 'Background Art'] as any,
+      skillsHighlighted: ['Concept Art', 'Storyboarding', 'Background Art'],
     },
   ]
 
@@ -313,6 +332,9 @@ if (isMainModule) {
       process.exit(1)
     })
     .finally(async () => {
+      if (pool) {
+        await pool.end()
+      }
       await prisma.$disconnect()
     })
 }
