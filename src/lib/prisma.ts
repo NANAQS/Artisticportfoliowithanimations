@@ -13,6 +13,7 @@ function createPrismaClient(): PrismaClient {
   const isBuild = process.env.NEXT_PHASE === 'phase-production-build'
   
   // Detectar se está usando Prisma Accelerate
+  // Priorizar PRISMA_DATABASE_URL, depois DATABASE_URL
   const prismaUrl = process.env.PRISMA_DATABASE_URL || process.env.DATABASE_URL
   
   // Durante o build, não validar URL (ela pode não estar disponível)
@@ -25,21 +26,18 @@ function createPrismaClient(): PrismaClient {
       if (isProduction || isVercel) {
         console.error('⚠️  Continuando sem DATABASE_URL - o Prisma Client tentará ler das variáveis de ambiente em runtime')
       }
+    } else {
+      // Log da URL detectada (sem mostrar a chave completa por segurança)
+      const urlPreview = prismaUrl.substring(0, 50) + '...'
+      console.log('✅ URL do banco detectada:', urlPreview)
     }
   }
 
   const isAccelerate = prismaUrl?.startsWith('prisma+') || false
+  const isLocalDev = !isVercel && !isProduction && process.env.DATABASE_URL && !isAccelerate
 
-  if (isAccelerate && prismaUrl) {
-    // Usar Prisma Accelerate
-    // O Prisma Client lê automaticamente PRISMA_DATABASE_URL ou DATABASE_URL quando começa com 'prisma+'
-    // Garantir que a variável esteja definida
-    if (!process.env.PRISMA_DATABASE_URL && !process.env.DATABASE_URL) {
-      process.env.PRISMA_DATABASE_URL = prismaUrl
-    }
-    return new PrismaClient()
-  } else if (process.env.DATABASE_URL && !isVercel && !isProduction) {
-    // Usar conexão direta com PostgreSQL apenas em desenvolvimento local
+  if (isLocalDev) {
+    // Usar conexão direta com PostgreSQL apenas em desenvolvimento local (sem Accelerate)
     try {
       const connectionString = process.env.DATABASE_URL
       if (!connectionString || connectionString.trim() === '') {
@@ -53,20 +51,9 @@ function createPrismaClient(): PrismaClient {
       return new PrismaClient()
     }
   } else {
-    // Na Vercel, produção ou quando não há DATABASE_URL
-    // Se houver uma URL disponível, garantir que esteja nas variáveis de ambiente
-    if (prismaUrl) {
-      // Se for Accelerate, garantir que PRISMA_DATABASE_URL esteja definida
-      if (prismaUrl.startsWith('prisma+')) {
-        if (!process.env.PRISMA_DATABASE_URL && !process.env.DATABASE_URL) {
-          process.env.PRISMA_DATABASE_URL = prismaUrl
-        }
-      }
-      // O Prisma Client lerá a URL das variáveis de ambiente automaticamente
-      return new PrismaClient()
-    }
-    // Se não houver URL, tentar criar mesmo assim (pode falhar em runtime, mas não quebra o build)
-    // O Prisma Client tentará ler das variáveis de ambiente em runtime
+    // Na Vercel, produção ou com Prisma Accelerate
+    // O Prisma Client lê automaticamente PRISMA_DATABASE_URL ou DATABASE_URL
+    // Não precisa passar nada no construtor - ele lê das variáveis de ambiente
     return new PrismaClient()
   }
 }
@@ -80,19 +67,29 @@ const prismaProxy = new Proxy({} as PrismaClient, {
         // Verificar se as variáveis de ambiente estão disponíveis
         const prismaUrl = process.env.PRISMA_DATABASE_URL || process.env.DATABASE_URL
         if (!prismaUrl || prismaUrl.trim() === '') {
-          console.error('❌ PRISMA_DATABASE_URL ou DATABASE_URL não está configurada')
-          console.error('⚠️  Configure a variável de ambiente na Vercel: Settings > Environment Variables')
+          const errorMsg = 'PRISMA_DATABASE_URL ou DATABASE_URL não está configurada. Configure a variável de ambiente na Vercel: Settings > Environment Variables'
+          console.error('❌', errorMsg)
+          // Na Vercel/produção, tentar criar mesmo assim (pode falhar em runtime)
+          // Mas vamos tentar para não quebrar o build
+        } else {
+          console.log('✅ Variável de ambiente encontrada, criando Prisma Client...')
         }
         globalForPrisma.prisma = createPrismaClient()
+        console.log('✅ Prisma Client criado com sucesso')
       } catch (error: any) {
         console.error('❌ Erro ao criar PrismaClient:', error?.message || error)
+        console.error('Stack:', error?.stack)
         // Tentar criar um PrismaClient básico como fallback
         // Ele tentará ler das variáveis de ambiente em runtime
         try {
+          console.log('⚠️  Tentando criar PrismaClient fallback...')
           globalForPrisma.prisma = new PrismaClient()
+          console.log('✅ Prisma Client fallback criado')
         } catch (fallbackError: any) {
           console.error('❌ Erro ao criar PrismaClient fallback:', fallbackError?.message || fallbackError)
-          throw new Error('Não foi possível inicializar o Prisma Client. Verifique as variáveis de ambiente PRISMA_DATABASE_URL ou DATABASE_URL na Vercel.')
+          console.error('Stack:', fallbackError?.stack)
+          const errorMsg = 'Não foi possível inicializar o Prisma Client. Verifique se a variável de ambiente DATABASE_URL está configurada na Vercel com o valor: prisma+postgres://accelerate.prisma-data.net/?api_key=...'
+          throw new Error(errorMsg)
         }
       }
     }
