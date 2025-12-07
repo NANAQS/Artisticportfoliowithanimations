@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import {
   Palette, LogOut, Grid, Rows, Image, ImageIcon, Users, Star,
   BarChart3, Menu, X, ChevronDown, ChevronRight, Settings, FileText, Mail, User,
-  Shield, Key, Clock
+  Shield, Key, Clock, Sparkles
 } from 'lucide-react'
 import LoginPage from './login/page'
 
@@ -53,11 +53,14 @@ export default function DashboardLayout({
       label: 'Configuração do Site',
       icon: Settings,
       children: [
+        { id: 'hero', label: 'Hero', icon: Sparkles, path: '/dashboard/hero' },
         { id: 'about', label: 'Sobre Mim', icon: User, path: '/dashboard/about' },
         { id: 'scroll', label: 'Scroll', icon: Image, path: '/dashboard/scroll' },
+        { id: 'art-process', label: 'Art Process', icon: Palette, path: '/dashboard/art-process' },
         { id: 'testimonials', label: 'Depoimentos', icon: Users, path: '/dashboard/testimonials' },
         { id: 'skills', label: 'Skills', icon: Star, path: '/dashboard/skills' },
         { id: 'contact', label: 'Contato', icon: Mail, path: '/dashboard/contact' },
+        { id: 'footer', label: 'Footer', icon: FileText, path: '/dashboard/footer' },
         { id: 'ad-banners', label: 'Anúncios', icon: ImageIcon, path: '/dashboard/ad-banners' },
       ]
     },

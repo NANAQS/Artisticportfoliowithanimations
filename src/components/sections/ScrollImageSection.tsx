@@ -106,19 +106,19 @@ export function ScrollImageSection() {
   const containerHeight = `${scrollContent.length * 100}vh`
 
   return (
-    <div ref={containerRef} style={{ height: containerHeight }} className="relative bg-black">
+    <div ref={containerRef} style={{ height: containerHeight }} className="relative bg-black overflow-x-hidden">
       <motion.div
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true, amount: 0.3 }}
         transition={{ duration: 0.8, ease: 'easeOut' }}
-        className={`${isSticky ? 'fixed top-0 left-0 right-0' : 'absolute bottom-0 left-0 right-0'} h-screen`}
+        className={`${isSticky ? 'fixed top-14 md:top-0 left-0 right-0' : 'absolute bottom-0 left-0 right-0'} h-[calc(100vh-3.5rem)] md:h-screen`}
       >
-        <section className="h-full flex items-center px-6 md:px-12 lg:px-24 bg-gradient-to-b from-black via-zinc-950 to-black">
+        <section className="h-full flex items-center px-4 sm:px-6 md:px-12 lg:px-24 bg-gradient-to-b from-black via-zinc-950 to-black pt-4 md:pt-0">
           <div className="max-w-7xl mx-auto w-full">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="grid md:grid-cols-2 gap-6 md:gap-12 items-center">
               {/* Image */}
-              <div className="relative h-[400px] md:h-[500px] overflow-hidden rounded-2xl">
+              <div className="relative h-[250px] sm:h-[300px] md:h-[400px] lg:h-[500px] overflow-hidden rounded-2xl">
                 <AnimatePresence initial={false}>
                   <motion.div
                     key={currentIndex}
@@ -153,7 +153,7 @@ export function ScrollImageSection() {
               </div>
 
               {/* Text */}
-              <div className="space-y-6">
+              <div className="space-y-4 md:space-y-6">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={currentIndex}

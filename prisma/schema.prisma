@@ -169,3 +169,42 @@ model LoginHistory {
   @@index([createdAt])
   @@index([email])
 }
+
+model HeroConfig {
+  id            Int      @id @default(autoincrement())
+  subtitle      String
+  title         String
+  titleHighlight String
+  description   String   @db.Text
+  stats         Json     // Array de objetos { number: string, label: string }
+  button1Text   String
+  button2Text   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("hero_config")
+}
+
+model ArtProcessConfig {
+  id          Int      @id @default(autoincrement())
+  subtitle    String
+  title       String
+  description String   @db.Text
+  steps       Json     // Array de objetos { icon: string, title: string, description: string }
+  ctaText     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("art_process_config")
+}
+
+model FooterConfig {
+  id            Int      @id @default(autoincrement())
+  authorName    String
+  copyrightText String
+  href          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("footer_config")
+}

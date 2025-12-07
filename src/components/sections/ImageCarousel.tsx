@@ -11,6 +11,16 @@ export function ImageCarousel() {
   const [isLoading, setIsLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [autoPlay, setAutoPlay] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     async function loadArtworks() {
@@ -55,7 +65,7 @@ export function ImageCarousel() {
   if (artworks.length === 0) return null
 
   return (
-    <section className="py-20 px-4 bg-gradient-to-b from-black via-zinc-950 to-black overflow-hidden">
+    <section className="py-20 px-4 bg-gradient-to-b from-black via-zinc-950 to-black overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -68,8 +78,8 @@ export function ImageCarousel() {
         </motion.div>
 
         {/* Cards Carousel */}
-        <div className="relative h-[500px] md:h-[500px] flex items-center justify-center px-4 md:px-0">
-          <div className="relative w-full max-w-6xl mx-auto">
+        <div className="relative h-[400px] sm:h-[450px] md:h-[500px] flex items-center justify-center px-4 md:px-0 overflow-x-hidden overflow-y-hidden touch-none">
+          <div className="relative w-full max-w-6xl mx-auto select-none">
             <AnimatePresence mode="sync">
               {artworks.map((artwork, index) => {
                 const isPrev = index === visible.prev
@@ -85,10 +95,13 @@ export function ImageCarousel() {
                 let blur = 8
                 let opacity = 0.4
 
+                // Responsive offsets based on screen size
+                const offsetValue = isMobile ? 150 : 300
+                
                 if (isPrev) {
-                  xOffset = -400
+                  xOffset = -offsetValue
                   zIndex = 1
-                  scale = 0.8
+                  scale = isMobile ? 0.65 : 0.75
                   blur = 8
                   opacity = 0.5
                 } else if (isCurrent) {
@@ -98,9 +111,9 @@ export function ImageCarousel() {
                   blur = 0
                   opacity = 1
                 } else if (isNext) {
-                  xOffset = 400
+                  xOffset = offsetValue
                   zIndex = 1
-                  scale = 0.8
+                  scale = isMobile ? 0.65 : 0.75
                   blur = 8
                   opacity = 0.5
                 }
@@ -108,25 +121,26 @@ export function ImageCarousel() {
                 return (
                   <motion.div
                     key={artwork.id}
-                    className="absolute left-1/2 top-1/2"
-                    initial={{ x: xOffset - 200, y: '-50%', scale: 0.5, opacity: 0 }}
+                    className="absolute left-1/2 top-1/2 pointer-events-none"
+                    initial={{ x: `calc(${xOffset}px - 50%)`, y: '-50%', scale: 0.5, opacity: 0 }}
                     animate={{
-                      x: xOffset - 200,
+                      x: `calc(${xOffset}px - 50%)`,
                       y: '-50%',
                       scale,
                       opacity,
                       filter: `blur(${blur}px)`,
                     }}
-                    exit={{ x: xOffset - 200, opacity: 0, scale: 0.5, transition: { duration: 0.3 } }}
+                    exit={{ x: `calc(${xOffset}px - 50%)`, opacity: 0, scale: 0.5, transition: { duration: 0.3 } }}
                     transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
-                    style={{ zIndex }}
+                    style={{ zIndex, touchAction: 'none' }}
                   >
                     <div
-                      className={`relative w-[280px] md:w-[400px] h-[380px] md:h-[480px] rounded-2xl overflow-hidden transition-all duration-700 ${
+                      className={`relative w-[240px] sm:w-[280px] md:w-[400px] h-[320px] sm:h-[380px] md:h-[480px] rounded-2xl overflow-hidden transition-all duration-700 select-none ${
                         isCurrent
                           ? 'shadow-[0_35px_80px_-15px_rgba(168,85,247,0.4)]'
                           : 'shadow-[0_20px_50px_-15px_rgba(0,0,0,0.8)]'
                       }`}
+                      style={{ touchAction: 'none' }}
                     >
                       <div className="absolute inset-0">
                         <ImageWithFallback

@@ -1,33 +1,65 @@
 'use client'
 
 import { motion } from 'motion/react'
-import { Lightbulb, Pencil, Palette, Sparkles } from 'lucide-react'
-import { Router } from 'next/router'
+import { Lightbulb, Pencil, Palette, Sparkles, Brush, Layers, Zap, Star, Heart, Code, Camera, PenTool } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
-const PROCESS_STEPS = [
-  {
-    icon: <Lightbulb className="w-8 h-8" />,
-    title: 'Concept',
-    description: 'Every piece starts with inspiration and careful planning',
-  },
-  {
-    icon: <Pencil className="w-8 h-8" />,
-    title: 'Sketch',
-    description: 'Rough sketches bring ideas to life on the canvas',
-  },
-  {
-    icon: <Palette className="w-8 h-8" />,
-    title: 'Color',
-    description: 'Adding vibrant colors and depth to create mood',
-  },
-  {
-    icon: <Sparkles className="w-8 h-8" />,
-    title: 'Final Touch',
-    description: 'Refining details and adding the finishing touches',
-  },
-]
+interface ArtProcessConfig {
+  subtitle: string
+  title: string
+  description: string
+  steps: Array<{ icon: string; title: string; description: string }>
+  ctaText: string
+}
+
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Lightbulb,
+  Pencil,
+  Palette,
+  Sparkles,
+  Brush,
+  Layers,
+  Zap,
+  Star,
+  Heart,
+  Code,
+  Camera,
+  PenTool,
+}
+
+const DEFAULT_CONFIG: ArtProcessConfig = {
+  subtitle: 'My Process',
+  title: 'From Idea to Artwork',
+  description: 'Every piece I create follows a thoughtful journey from initial concept to final masterpiece',
+  steps: [
+    { icon: 'Lightbulb', title: 'Concept', description: 'Every piece starts with inspiration and careful planning' },
+    { icon: 'Pencil', title: 'Sketch', description: 'Rough sketches bring ideas to life on the canvas' },
+    { icon: 'Palette', title: 'Color', description: 'Adding vibrant colors and depth to create mood' },
+    { icon: 'Sparkles', title: 'Final Touch', description: 'Refining details and adding the finishing touches' },
+  ],
+  ctaText: 'Start Your Commission',
+}
 
 export function ArtProcess() {
+  const [config, setConfig] = useState<ArtProcessConfig>(DEFAULT_CONFIG)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchConfig() {
+      try {
+        const res = await fetch('/api/art-process')
+        const data = await res.json()
+        setConfig(data)
+      } catch (error) {
+        console.error('Erro ao carregar configuração do Art Process:', error)
+        // Manter valores padrão em caso de erro
+        setConfig(DEFAULT_CONFIG)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchConfig()
+  }, [])
   return (
     <section className="py-24 px-4 bg-gradient-to-b from-black via-zinc-950 to-black relative overflow-hidden">
       {/* Background decoration */}
@@ -41,11 +73,10 @@ export function ArtProcess() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <p className="text-purple-400 tracking-widest uppercase mb-4">My Process</p>
-          <h2 className="text-white mb-4">From Idea to Artwork</h2>
+          <p className="text-purple-400 tracking-widest uppercase mb-4">{config.subtitle}</p>
+          <h2 className="text-white mb-4">{config.title}</h2>
           <p className="text-gray-300 max-w-2xl mx-auto">
-            Every piece I create follows a thoughtful journey from initial concept to final
-            masterpiece
+            {config.description}
           </p>
         </motion.div>
 
@@ -54,44 +85,47 @@ export function ArtProcess() {
           <div className="absolute top-1/2 left-0 right-0 h-1 bg-gradient-to-r from-purple-600/30 via-pink-600/30 to-blue-600/30 -translate-y-1/2 hidden lg:block" />
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {PROCESS_STEPS.map((step, index) => (
-              <motion.div
-                key={step.title}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="relative"
-              >
+            {config.steps.map((step, index) => {
+              const IconComponent = iconMap[step.icon] || Palette
+              return (
                 <motion.div
-                  whileHover={{ y: -10 }}
-                  className="bg-white/5 backdrop-blur-sm p-8 rounded-2xl border border-white/10 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300 relative z-10"
+                  key={step.title}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className="relative"
                 >
-                  {/* Number badge */}
                   <motion.div
-                    className="absolute -top-4 -right-4 w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-white shadow-lg"
-                    initial={{ scale: 0 }}
-                    whileInView={{ scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.1 + 0.2, type: 'spring' }}
+                    whileHover={{ y: -10 }}
+                    className="bg-white/5 backdrop-blur-sm p-8 rounded-2xl border border-white/10 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300 relative z-10"
                   >
-                    {index + 1}
-                  </motion.div>
+                    {/* Number badge */}
+                    <motion.div
+                      className="absolute -top-4 -right-4 w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-white shadow-lg"
+                      initial={{ scale: 0 }}
+                      whileInView={{ scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.1 + 0.2, type: 'spring' }}
+                    >
+                      {index + 1}
+                    </motion.div>
 
-                  {/* Icon */}
-                  <motion.div
-                    className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center text-purple-400 mb-6 border border-purple-500/20"
-                    whileHover={{ rotate: 360 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    {step.icon}
-                  </motion.div>
+                    {/* Icon */}
+                    <motion.div
+                      className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center text-purple-400 mb-6 border border-purple-500/20"
+                      whileHover={{ rotate: 360 }}
+                      transition={{ duration: 0.6 }}
+                    >
+                      <IconComponent className="w-8 h-8" />
+                    </motion.div>
 
-                  <h3 className="text-white mb-3">{step.title}</h3>
-                  <p className="text-gray-400">{step.description}</p>
+                    <h3 className="text-white mb-3">{step.title}</h3>
+                    <p className="text-gray-400">{step.description}</p>
+                  </motion.div>
                 </motion.div>
-              </motion.div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
@@ -107,7 +141,9 @@ export function ArtProcess() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            Start Your Commission
+            <a href="#contact">
+            {config.ctaText}
+            </a>
           </motion.button>
         </motion.div>
       </div>
