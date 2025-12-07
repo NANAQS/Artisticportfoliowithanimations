@@ -9,6 +9,7 @@
   "/api/auth/verify/route": "app/api/auth/verify/route.js",
   "/api/contact/route": "app/api/contact/route.js",
   "/api/hello-world/route": "app/api/hello-world/route.js",
+  "/api/init/route": "app/api/init/route.js",
   "/api/social-links/route": "app/api/social-links/route.js",
   "/api/testimonials/route": "app/api/testimonials/route.js",
   "/api/visits/route": "app/api/visits/route.js",
