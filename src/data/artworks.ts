@@ -3,6 +3,7 @@ export interface GalleryArtwork {
   id: number
   title: string
   category: string
+  categoryId?: number
   image: string
   description: string
   gridClass: string
@@ -15,6 +16,7 @@ export interface CarouselArtwork {
   url: string
   title: string
   category: string
+  categoryId?: number
   year: string
 }
 

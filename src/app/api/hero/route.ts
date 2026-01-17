@@ -10,6 +10,8 @@ export async function GET() {
     // Se não existir, retornar valores padrão
     if (!config) {
       return NextResponse.json({
+        heroImageUrl: 'https://lh3.googleusercontent.com/d/1ul-n2KW50Y6QkDy0MSENg39dr9H__bJR',
+        welcomeText: 'Hello! Welcome! ✨',
         subtitle: '2D Artist & Illustrator',
         title: 'Bringing Stories to Life',
         titleHighlight: 'Through Art',
@@ -26,6 +28,8 @@ export async function GET() {
 
     return NextResponse.json({
       id: config.id,
+      heroImageUrl: config.heroImageUrl,
+      welcomeText: config.welcomeText,
       subtitle: config.subtitle,
       title: config.title,
       titleHighlight: config.titleHighlight,
@@ -55,10 +59,10 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json()
-    const { subtitle, title, titleHighlight, description, stats, button1Text, button2Text } = body
+    const { heroImageUrl, welcomeText, subtitle, title, titleHighlight, description, stats, button1Text, button2Text } = body
 
     // Validar campos obrigatórios
-    if (!subtitle || !title || !titleHighlight || !description || !stats || !button1Text || !button2Text) {
+    if (!heroImageUrl || !welcomeText || !subtitle || !title || !titleHighlight || !description || !stats || !button1Text || !button2Text) {
       return NextResponse.json(
         { error: 'Todos os campos são obrigatórios' },
         { status: 400 }
@@ -73,6 +77,8 @@ export async function PUT(request: Request) {
       config = await prisma.heroConfig.update({
         where: { id: existing.id },
         data: {
+          heroImageUrl,
+          welcomeText,
           subtitle,
           title,
           titleHighlight,
@@ -85,6 +91,8 @@ export async function PUT(request: Request) {
     } else {
       config = await prisma.heroConfig.create({
         data: {
+          heroImageUrl,
+          welcomeText,
           subtitle,
           title,
           titleHighlight,
@@ -108,5 +116,6 @@ export async function PUT(request: Request) {
     )
   }
 }
+
 
 

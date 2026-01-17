@@ -6,6 +6,8 @@ import { useRef, useMemo, useState, useEffect } from 'react'
 import { ImageWithFallback } from '@/components/common/ImageWithFallback'
 
 interface HeroConfig {
+  heroImageUrl: string
+  welcomeText: string
   subtitle: string
   title: string
   titleHighlight: string
@@ -16,6 +18,8 @@ interface HeroConfig {
 }
 
 const DEFAULT_CONFIG: HeroConfig = {
+  heroImageUrl: 'https://lh3.googleusercontent.com/d/1ul-n2KW50Y6QkDy0MSENg39dr9H__bJR',
+  welcomeText: 'Hello! Welcome! ✨',
   subtitle: '2D Artist & Illustrator',
   title: 'Bringing Stories to Life',
   titleHighlight: 'Through Art',
@@ -157,7 +161,7 @@ export function Hero() {
               <motion.div className="relative w-full">
                 <div className="relative overflow-hidden">
                   <ImageWithFallback
-                    src="https://lh3.googleusercontent.com/d/1ul-n2KW50Y6QkDy0MSENg39dr9H__bJR"
+                    src={config.heroImageUrl}
                     alt="Artist Character"
                     className="w-full h-auto"
                   />
@@ -171,7 +175,7 @@ export function Hero() {
                   className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10"
                 >
                   <div className="relative bg-white text-slate-900 px-6 py-3 rounded-2xl shadow-xl">
-                    <p className="whitespace-nowrap">Hello! Welcome! ✨</p>
+                    <p className="whitespace-nowrap">{config.welcomeText}</p>
                     <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white rotate-45" />
                   </div>
                 </motion.div>

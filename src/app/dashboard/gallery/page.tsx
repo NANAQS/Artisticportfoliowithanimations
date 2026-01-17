@@ -27,6 +27,7 @@ interface GalleryArtwork {
   id: number
   title: string
   category: string
+  categoryId: number
   image: string
   description: string
   gridClass: string
@@ -34,13 +35,10 @@ interface GalleryArtwork {
   youtubeUrl?: string | null
 }
 
-const CATEGORIES = [
-  'illustrations',
-  'character design',
-  'landscapes',
-  'portraits',
-  'concept art',
-]
+interface Category {
+  id: number
+  name: string
+}
 
 const GRID_CLASSES = [
   { value: 'md:col-span-1 md:row-span-1', label: '1x1 (Pequeno)', cols: 1, rows: 1 },
@@ -227,18 +225,34 @@ export default function GalleryPage() {
 
   const [formData, setFormData] = useState({
     title: '',
-    category: CATEGORIES[0],
+    categoryId: 0,
     image: '',
     description: '',
     gridClass: GRID_CLASSES[0].value,
     youtubeUrl: '',
   })
   const [newCategoryInput, setNewCategoryInput] = useState('')
-  const [availableCategories, setAvailableCategories] = useState<string[]>(CATEGORIES)
+  const [availableCategories, setAvailableCategories] = useState<Category[]>([])
 
   useEffect(() => {
     loadArtworks()
+    loadCategories()
   }, [])
+
+  async function loadCategories() {
+    try {
+      const res = await fetch('/api/categories')
+      const data = await res.json()
+      const categories = data.data || []
+      setAvailableCategories(categories)
+      if (!formData.categoryId && categories.length > 0) {
+        setFormData((prev) => ({ ...prev, categoryId: categories[0].id }))
+      }
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error)
+      setAvailableCategories([])
+    }
+  }
 
   async function loadArtworks() {
     setIsLoading(true)
@@ -248,13 +262,6 @@ export default function GalleryPage() {
       const loadedArtworks = data.data || []
       setArtworks(loadedArtworks)
       setOrderedArtworks(loadedArtworks)
-      
-      // Coletar categorias únicas das obras e adicionar às categorias disponíveis
-      const artworkCategories = Array.from(
-        new Set(loadedArtworks.map((a: GalleryArtwork) => a.category).filter(Boolean) as string[])
-      )
-      const allCategories = Array.from(new Set([...CATEGORIES, ...artworkCategories])) as string[]
-      setAvailableCategories(allCategories)
     } catch (error) {
       console.error('Erro ao carregar artworks:', error)
     } finally {
@@ -336,7 +343,7 @@ export default function GalleryPage() {
     setEditingArtwork(null)
     setFormData({
       title: '',
-      category: CATEGORIES[0],
+      categoryId: availableCategories[0]?.id || 0,
       image: '',
       description: '',
       gridClass: GRID_CLASSES[0].value,
@@ -350,7 +357,7 @@ export default function GalleryPage() {
     setEditingArtwork(artwork)
     setFormData({
       title: artwork.title,
-      category: artwork.category,
+      categoryId: artwork.categoryId,
       image: artwork.image,
       description: artwork.description,
       gridClass: artwork.gridClass,
@@ -358,6 +365,39 @@ export default function GalleryPage() {
     })
     setNewCategoryInput('')
     setIsModalOpen(true)
+  }
+
+  async function handleCreateCategory() {
+    const name = newCategoryInput.trim()
+    if (!name) return
+
+    const exists = availableCategories.some(
+      (category) => category.name.toLowerCase() === name.toLowerCase()
+    )
+    if (exists) {
+      setNewCategoryInput('')
+      return
+    }
+
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setMessage({ type: 'error', text: data.error || 'Erro ao criar categoria' })
+        return
+      }
+      const created = data.data
+      setAvailableCategories((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
+      setFormData((prev) => ({ ...prev, categoryId: created.id }))
+      setNewCategoryInput('')
+    } catch (error) {
+      console.error('Erro ao criar categoria:', error)
+      setMessage({ type: 'error', text: 'Erro ao criar categoria' })
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -671,13 +711,13 @@ export default function GalleryPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div className="relative md:col-span-2">
                       <select
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        value={String(formData.categoryId)}
+                        onChange={(e) => setFormData({ ...formData, categoryId: Number(e.target.value) })}
                         className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500 appearance-none"
                       >
                         {availableCategories.map((cat) => (
-                          <option key={cat} value={cat} className="bg-slate-800">
-                            {cat}
+                          <option key={cat.id} value={cat.id} className="bg-slate-800">
+                            {cat.name}
                           </option>
                         ))}
                       </select>
@@ -688,15 +728,10 @@ export default function GalleryPage() {
                         type="text"
                         value={newCategoryInput}
                         onChange={(e) => setNewCategoryInput(e.target.value)}
-                        onKeyPress={(e) => {
+                        onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault()
-                            if (newCategoryInput.trim() && !availableCategories.includes(newCategoryInput.trim().toLowerCase())) {
-                              const newCat = newCategoryInput.trim().toLowerCase()
-                              setAvailableCategories([...availableCategories, newCat])
-                              setFormData({ ...formData, category: newCat })
-                              setNewCategoryInput('')
-                            }
+                            handleCreateCategory()
                           }
                         }}
                         className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-purple-500"
@@ -704,14 +739,7 @@ export default function GalleryPage() {
                       />
                       <button
                         type="button"
-                        onClick={() => {
-                          if (newCategoryInput.trim() && !availableCategories.includes(newCategoryInput.trim().toLowerCase())) {
-                            const newCat = newCategoryInput.trim().toLowerCase()
-                            setAvailableCategories([...availableCategories, newCat])
-                            setFormData({ ...formData, category: newCat })
-                            setNewCategoryInput('')
-                          }
-                        }}
+                        onClick={handleCreateCategory}
                         className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs whitespace-nowrap"
                       >
                         Criar
@@ -770,7 +798,7 @@ export default function GalleryPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={isSaving}
+                    disabled={isSaving || !formData.categoryId}
                     className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
                   >
                     {isSaving ? (
@@ -791,4 +819,3 @@ export default function GalleryPage() {
     </div>
   )
 }
-

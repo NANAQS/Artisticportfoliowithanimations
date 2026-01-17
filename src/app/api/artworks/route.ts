@@ -2,6 +2,37 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 
+async function resolveCategoryConnect(data: { categoryId?: number; category?: string }) {
+  const categoryId = Number(data.categoryId)
+  if (Number.isFinite(categoryId) && categoryId > 0) {
+    return { category: { connect: { id: categoryId } } }
+  }
+  if (data.category) {
+    const name = String(data.category).trim()
+    if (!name) return null
+    return {
+      category: {
+        connectOrCreate: {
+          where: { name },
+          create: { name },
+        },
+      },
+    }
+  }
+  return null
+}
+
+function mapArtworkCategory<T extends { categoryId: number }>(
+  artwork: T & { category?: { id: number; name: string } | null }
+) {
+  const { category, ...rest } = artwork
+  return {
+    ...rest,
+    categoryId: artwork.categoryId,
+    category: category?.name || '',
+  }
+}
+
 // GET - Buscar artworks (público)
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -15,19 +46,21 @@ export async function GET(request: Request) {
       
       if (type === 'gallery') {
         const artwork = await prisma.galleryArtwork.findUnique({
-          where: { id: artworkId }
+          where: { id: artworkId },
+          include: { category: true },
         })
         return artwork 
-          ? NextResponse.json({ data: artwork })
+          ? NextResponse.json({ data: mapArtworkCategory(artwork) })
           : NextResponse.json({ error: 'Artwork não encontrado' }, { status: 404 })
       }
       
       if (type === 'carousel') {
         const artwork = await prisma.carouselArtwork.findUnique({
-          where: { id: artworkId }
+          where: { id: artworkId },
+          include: { category: true },
         })
         return artwork 
-          ? NextResponse.json({ data: artwork })
+          ? NextResponse.json({ data: mapArtworkCategory(artwork) })
           : NextResponse.json({ error: 'Artwork não encontrado' }, { status: 404 })
       }
       
@@ -44,16 +77,18 @@ export async function GET(request: Request) {
     // Buscar todos por tipo
     if (type === 'gallery') {
       const artworks = await prisma.galleryArtwork.findMany({
-        orderBy: { order: 'asc' }
+        orderBy: { order: 'asc' },
+        include: { category: true },
       })
-      return NextResponse.json({ data: artworks })
+      return NextResponse.json({ data: artworks.map(mapArtworkCategory) })
     }
 
     if (type === 'carousel') {
       const artworks = await prisma.carouselArtwork.findMany({
-        orderBy: { id: 'asc' }
+        orderBy: { id: 'asc' },
+        include: { category: true },
       })
-      return NextResponse.json({ data: artworks })
+      return NextResponse.json({ data: artworks.map(mapArtworkCategory) })
     }
 
     if (type === 'scroll') {
@@ -65,14 +100,14 @@ export async function GET(request: Request) {
 
     // Retorna todos os dados se nenhum tipo específico for solicitado
     const [gallery, carousel, scroll] = await Promise.all([
-      prisma.galleryArtwork.findMany({ orderBy: { order: 'asc' } }),
-      prisma.carouselArtwork.findMany({ orderBy: { id: 'asc' } }),
+      prisma.galleryArtwork.findMany({ orderBy: { order: 'asc' }, include: { category: true } }),
+      prisma.carouselArtwork.findMany({ orderBy: { id: 'asc' }, include: { category: true } }),
       prisma.scrollContent.findMany({ orderBy: { id: 'asc' } }),
     ])
 
     return NextResponse.json({
-      gallery,
-      carousel,
+      gallery: gallery.map(mapArtworkCategory),
+      carousel: carousel.map(mapArtworkCategory),
       scroll,
     })
   } catch (error) {
@@ -100,9 +135,17 @@ export async function POST(request: Request) {
     const { type, ...data } = body
 
     if (type === 'gallery') {
-      if (!data.title || !data.category || !data.image || !data.description) {
+      if (!data.title || (!data.category && !data.categoryId) || !data.image || !data.description) {
         return NextResponse.json(
-          { error: 'Campos obrigatórios: title, category, image, description' },
+          { error: 'Campos obrigatórios: title, category/categoryId, image, description' },
+          { status: 400 }
+        )
+      }
+
+      const categoryConnect = await resolveCategoryConnect(data)
+      if (!categoryConnect) {
+        return NextResponse.json(
+          { error: 'Categoria inválida' },
           { status: 400 }
         )
       }
@@ -116,25 +159,34 @@ export async function POST(request: Request) {
       const newArtwork = await prisma.galleryArtwork.create({
         data: {
           title: data.title,
-          category: data.category,
           image: data.image,
           description: data.description,
           gridClass: data.gridClass || 'md:col-span-1 md:row-span-1',
           order: newOrder,
           youtubeUrl: data.youtubeUrl || null,
-        }
+          ...categoryConnect,
+        },
+        include: { category: true },
       })
       
       return NextResponse.json({
         message: 'Gallery artwork criado com sucesso',
-        data: newArtwork,
+        data: mapArtworkCategory(newArtwork),
       }, { status: 201 })
     }
 
     if (type === 'carousel') {
-      if (!data.title || !data.category || !data.url || !data.year) {
+      if (!data.title || (!data.category && !data.categoryId) || !data.url || !data.year) {
         return NextResponse.json(
-          { error: 'Campos obrigatórios: title, category, url, year' },
+          { error: 'Campos obrigatórios: title, category/categoryId, url, year' },
+          { status: 400 }
+        )
+      }
+
+      const categoryConnect = await resolveCategoryConnect(data)
+      if (!categoryConnect) {
+        return NextResponse.json(
+          { error: 'Categoria inválida' },
           { status: 400 }
         )
       }
@@ -143,14 +195,15 @@ export async function POST(request: Request) {
         data: {
           url: data.url,
           title: data.title,
-          category: data.category,
           year: data.year,
-        }
+          ...categoryConnect,
+        },
+        include: { category: true },
       })
       
       return NextResponse.json({
         message: 'Carousel artwork criado com sucesso',
-        data: newCarouselArtwork,
+        data: mapArtworkCategory(newCarouselArtwork),
       }, { status: 201 })
     }
 
@@ -271,37 +324,41 @@ export async function PUT(request: Request) {
     }
 
     if (type === 'gallery') {
+      const categoryConnect = await resolveCategoryConnect(data)
       const updatedArtwork = await prisma.galleryArtwork.update({
         where: { id },
         data: {
           ...(data.title && { title: data.title }),
-          ...(data.category && { category: data.category }),
           ...(data.image && { image: data.image }),
           ...(data.description && { description: data.description }),
           ...(data.gridClass && { gridClass: data.gridClass }),
           ...(data.order !== undefined && { order: data.order }),
           ...(data.youtubeUrl !== undefined && { youtubeUrl: data.youtubeUrl || null }),
-        }
+          ...(categoryConnect || {}),
+        },
+        include: { category: true },
       })
       return NextResponse.json({
         message: 'Gallery artwork atualizado com sucesso',
-        data: updatedArtwork,
+        data: mapArtworkCategory(updatedArtwork),
       })
     }
 
     if (type === 'carousel') {
+      const categoryConnect = await resolveCategoryConnect(data)
       const updatedArtwork = await prisma.carouselArtwork.update({
         where: { id },
         data: {
           ...(data.title && { title: data.title }),
-          ...(data.category && { category: data.category }),
           ...(data.url && { url: data.url }),
           ...(data.year && { year: data.year }),
-        }
+          ...(categoryConnect || {}),
+        },
+        include: { category: true },
       })
       return NextResponse.json({
         message: 'Carousel artwork atualizado com sucesso',
-        data: updatedArtwork,
+        data: mapArtworkCategory(updatedArtwork),
       })
     }
 

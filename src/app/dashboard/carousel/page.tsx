@@ -12,6 +12,7 @@ interface CarouselArtwork {
   url: string
   title: string
   category: string
+  categoryId: number
   year: string
 }
 
@@ -19,8 +20,14 @@ interface GalleryArtwork {
   id: number
   title: string
   category: string
+  categoryId: number
   image: string
   description: string
+}
+
+interface Category {
+  id: number
+  name: string
 }
 
 export default function CarouselPage() {
@@ -33,13 +40,13 @@ export default function CarouselPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [previewIndex, setPreviewIndex] = useState(0)
   const [previewAutoPlay, setPreviewAutoPlay] = useState(true)
-  const [availableCategories, setAvailableCategories] = useState<string[]>([])
+  const [availableCategories, setAvailableCategories] = useState<Category[]>([])
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     url: '',
     title: '',
-    category: '',
+    categoryId: 0,
     year: '',
   })
 
@@ -72,54 +79,18 @@ export default function CarouselPage() {
 
   async function loadCategories() {
     try {
-      // Buscar categorias da galeria
-      const galleryRes = await fetch('/api/artworks?type=gallery')
-      const galleryData = await galleryRes.json()
-      const galleryArtworks = galleryData.data || []
-      
-      // Buscar categorias do carrossel
-      const carouselRes = await fetch('/api/artworks?type=carousel')
-      const carouselData = await carouselRes.json()
-      const carouselArtworks = carouselData.data || []
-      
-      // Coletar todas as categorias do banco de dados, normalizando e filtrando vazias
-      const allCategoriesFromDB: string[] = []
-      
-      // Adicionar categorias da galeria
-      galleryArtworks.forEach((a: any) => {
-        if (a.category) {
-          const trimmed = a.category.trim()
-          if (trimmed && !allCategoriesFromDB.includes(trimmed)) {
-            allCategoriesFromDB.push(trimmed)
-          }
-        }
-      })
-      
-      // Adicionar categorias do carrossel (sem duplicar)
-      carouselArtworks.forEach((a: any) => {
-        if (a.category) {
-          const trimmed = a.category.trim()
-          if (trimmed && !allCategoriesFromDB.includes(trimmed)) {
-            allCategoriesFromDB.push(trimmed)
-          }
-        }
-      })
-      
-      // Ordenar alfabeticamente
-      const uniqueCategories = allCategoriesFromDB.sort()
-      
-      setAvailableCategories(uniqueCategories)
-      
-      // Se formData.category estiver vazio ou não existir nas categorias, usar a primeira disponível
-      if (!formData.category || !uniqueCategories.includes(formData.category)) {
-        setFormData(prev => ({
+      const res = await fetch('/api/categories')
+      const data = await res.json()
+      const categories = data.data || []
+      setAvailableCategories(categories)
+      if (!formData.categoryId && categories.length > 0) {
+        setFormData((prev) => ({
           ...prev,
-          category: uniqueCategories[0] || ''
+          categoryId: categories[0].id,
         }))
       }
     } catch (error) {
       console.error('Erro ao carregar categorias:', error)
-      // Em caso de erro, manter array vazio
       setAvailableCategories([])
     }
   }
@@ -143,7 +114,7 @@ export default function CarouselPage() {
     setFormData({
       url: '',
       title: '',
-      category: availableCategories[0] || '',
+      categoryId: availableCategories[0]?.id || 0,
       year: '',
     })
     loadGalleryArtworks() // Recarregar obras da galeria ao abrir modal
@@ -156,7 +127,7 @@ export default function CarouselPage() {
     setFormData({
       url: artwork.url,
       title: artwork.title,
-      category: artwork.category,
+      categoryId: artwork.categoryId,
       year: artwork.year,
     })
     loadGalleryArtworks() // Recarregar obras da galeria ao abrir modal
@@ -169,7 +140,7 @@ export default function CarouselPage() {
       ...formData,
       url: galleryArtwork.image,
       title: galleryArtwork.title,
-      category: galleryArtwork.category || formData.category,
+      categoryId: galleryArtwork.categoryId || formData.categoryId,
     })
   }
 
@@ -563,20 +534,20 @@ export default function CarouselPage() {
                   <div className="relative">
                     {availableCategories.length > 0 ? (
                       <select
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        value={String(formData.categoryId)}
+                        onChange={(e) => setFormData({ ...formData, categoryId: Number(e.target.value) })}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 appearance-none"
                         required
                       >
                         {availableCategories.map((cat) => (
-                          <option key={cat} value={cat} className="bg-slate-800">
-                            {cat}
+                          <option key={cat.id} value={cat.id} className="bg-slate-800">
+                            {cat.name}
                           </option>
                         ))}
                       </select>
                     ) : (
                       <div className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-gray-400 text-sm">
-                        Nenhuma categoria encontrada. Crie uma obra na galeria primeiro.
+                        Nenhuma categoria encontrada. Crie uma categoria primeiro.
                       </div>
                     )}
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -605,7 +576,7 @@ export default function CarouselPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={isSaving || availableCategories.length === 0 || !formData.category || !formData.url}
+                    disabled={isSaving || availableCategories.length === 0 || !formData.categoryId || !formData.url}
                     className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isSaving ? (

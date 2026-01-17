@@ -46,6 +46,7 @@ export default function DashboardLayout({
       children: [
         { id: 'gallery', label: 'Galeria', icon: Grid, path: '/dashboard/gallery' },
         { id: 'carousel', label: 'Carrossel', icon: Rows, path: '/dashboard/carousel' },
+        { id: 'categories', label: 'Categorias', icon: FileText, path: '/dashboard/categories' },
       ]
     },
     {
@@ -275,4 +276,3 @@ export default function DashboardLayout({
   )
   )
 }
-

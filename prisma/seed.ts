@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
@@ -17,7 +18,10 @@ if (isAccelerate) {
   prisma = new PrismaClient()
 } else {
   // Usar conexão direta com PostgreSQL
-  const connectionString = process.env.DATABASE_URL!
+  const connectionString = process.env.DATABASE_URL
+  if (!connectionString) {
+    throw new Error('DATABASE_URL não está definido. Verifique o arquivo .env')
+  }
   pool = new pg.Pool({ connectionString })
   const adapter = new PrismaPg(pool)
   prisma = new PrismaClient({ adapter })
@@ -38,6 +42,7 @@ async function main() {
     await prisma.scrollContent.deleteMany()
     await prisma.testimonial.deleteMany()
     await prisma.skill.deleteMany()
+    await prisma.category.deleteMany()
   } else {
     console.log('ℹ️  Modo produção: verificando se dados já existem...')
   }
@@ -171,23 +176,6 @@ async function main() {
     },
   ]
 
-  // Criar gallery artworks com ordem (apenas se não existirem)
-  const existingGalleryCount = await prisma.galleryArtwork.count()
-  if (existingGalleryCount === 0) {
-    for (let i = 0; i < galleryArtworks.length; i++) {
-      await prisma.galleryArtwork.create({
-        data: {
-          ...galleryArtworks[i],
-          order: i,
-        }
-      })
-    }
-    console.log(`✅ ${galleryArtworks.length} gallery artworks criados`)
-  } else {
-    console.log(`ℹ️  ${existingGalleryCount} gallery artworks já existem`)
-  }
-
-  // Carousel Artworks
   const carouselArtworks = [
     {
       url: 'https://images.unsplash.com/photo-1682446857262-9232e0c9c3c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaWdpdGFsJTIwcGFpbnRpbmclMjBhcnR3b3JrfGVufDF8fHx8MTc2MTc5NDc5MXww&ixlib=rb-4.1.0&q=80&w=1080',
@@ -221,9 +209,53 @@ async function main() {
     },
   ]
 
+  const categoryNames = Array.from(
+    new Set([...galleryArtworks.map((art) => art.category), ...carouselArtworks.map((art) => art.category)])
+  )
+
+  const existingCategoryCount = await prisma.category.count()
+  if (existingCategoryCount === 0) {
+    await prisma.category.createMany({
+      data: categoryNames.map((name) => ({ name })),
+    })
+    console.log(`✅ ${categoryNames.length} categorias criadas`)
+  } else {
+    console.log(`ℹ️  ${existingCategoryCount} categorias já existem`)
+  }
+
+  const categories = await prisma.category.findMany()
+  const categoryMap = new Map(categories.map((category) => [category.name, category.id]))
+
+  // Criar gallery artworks com ordem (apenas se não existirem)
+  const existingGalleryCount = await prisma.galleryArtwork.count()
+  if (existingGalleryCount === 0) {
+    for (let i = 0; i < galleryArtworks.length; i++) {
+      await prisma.galleryArtwork.create({
+        data: {
+          title: galleryArtworks[i].title,
+          categoryId: categoryMap.get(galleryArtworks[i].category) ?? categories[0]?.id,
+          image: galleryArtworks[i].image,
+          description: galleryArtworks[i].description,
+          gridClass: galleryArtworks[i].gridClass,
+          order: i,
+        }
+      })
+    }
+    console.log(`✅ ${galleryArtworks.length} gallery artworks criados`)
+  } else {
+    console.log(`ℹ️  ${existingGalleryCount} gallery artworks já existem`)
+  }
+
   const existingCarouselCount = await prisma.carouselArtwork.count()
   if (existingCarouselCount === 0) {
-    await prisma.carouselArtwork.createMany({ data: carouselArtworks })
+    await prisma.carouselArtwork.createMany({
+      data: carouselArtworks.map((artwork) => ({
+        url: artwork.url,
+        title: artwork.title,
+        categoryId: categoryMap.get(artwork.category) ?? categories[0]?.id,
+        year: artwork.year,
+      })),
+    })
     console.log(`✅ ${carouselArtworks.length} carousel artworks criados`)
   } else {
     console.log(`ℹ️  ${existingCarouselCount} carousel artworks já existem`)

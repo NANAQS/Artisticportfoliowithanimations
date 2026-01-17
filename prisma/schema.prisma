@@ -21,7 +21,8 @@ model User {
 model GalleryArtwork {
   id          Int      @id @default(autoincrement())
   title       String
-  category    String
+  categoryId  Int
+  category    Category @relation(fields: [categoryId], references: [id])
   image       String
   description String
   gridClass   String   @default("md:col-span-1 md:row-span-1")
@@ -37,7 +38,8 @@ model CarouselArtwork {
   id        Int      @id @default(autoincrement())
   url       String
   title     String
-  category  String
+  categoryId Int
+  category  Category @relation(fields: [categoryId], references: [id])
   year      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -79,6 +81,17 @@ model Skill {
   updatedAt DateTime @updatedAt
 
   @@map("skills")
+}
+
+model Category {
+  id        Int              @id @default(autoincrement())
+  name      String           @unique
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  galleryArtworks  GalleryArtwork[]
+  carouselArtworks CarouselArtwork[]
+
+  @@map("categories")
 }
 
 model Visit {
@@ -172,6 +185,8 @@ model LoginHistory {
 
 model HeroConfig {
   id            Int      @id @default(autoincrement())
+  heroImageUrl  String   @default("https://lh3.googleusercontent.com/d/1ul-n2KW50Y6QkDy0MSENg39dr9H__bJR")
+  welcomeText   String   @default("Hello! Welcome! ✨")
   subtitle      String
   title         String
   titleHighlight String

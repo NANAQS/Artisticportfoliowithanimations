@@ -6,6 +6,8 @@ import { Sparkles, Loader2, Check, X, Plus, Trash2 } from 'lucide-react'
 
 interface HeroConfig {
   id?: number
+  heroImageUrl: string
+  welcomeText: string
   subtitle: string
   title: string
   titleHighlight: string
@@ -22,6 +24,8 @@ export default function HeroPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const [formData, setFormData] = useState<HeroConfig>({
+    heroImageUrl: '',
+    welcomeText: '',
     subtitle: '',
     title: '',
     titleHighlight: '',
@@ -42,6 +46,8 @@ export default function HeroPage() {
       const data = await res.json()
       setConfig(data)
       setFormData({
+        heroImageUrl: data.heroImageUrl || '',
+        welcomeText: data.welcomeText || '',
         subtitle: data.subtitle || '',
         title: data.title || '',
         titleHighlight: data.titleHighlight || '',
@@ -163,6 +169,28 @@ export default function HeroPage() {
 
       <div className="bg-white/5 rounded-2xl p-6 border border-white/10 space-y-6">
         <div>
+          <label className="block text-gray-300 text-sm mb-2">Imagem do Hero</label>
+          <input
+            type="text"
+            value={formData.heroImageUrl}
+            onChange={(e) => setFormData({ ...formData, heroImageUrl: e.target.value })}
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500"
+            placeholder="https://..."
+          />
+        </div>
+
+        <div>
+          <label className="block text-gray-300 text-sm mb-2">Texto de Boas-vindas</label>
+          <input
+            type="text"
+            value={formData.welcomeText}
+            onChange={(e) => setFormData({ ...formData, welcomeText: e.target.value })}
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500"
+            placeholder="Hello! Welcome! ✨"
+          />
+        </div>
+
+        <div>
           <label className="block text-gray-300 text-sm mb-2">Subtítulo</label>
           <input
             type="text"
@@ -270,5 +298,6 @@ export default function HeroPage() {
     </div>
   )
 }
+
 
 
