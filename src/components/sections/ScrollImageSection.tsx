@@ -30,6 +30,9 @@ export function ScrollImageSection() {
   }, [])
 
   const currentContent = scrollContent[currentIndex]
+  const hasHtmlContent = (text: string) => /<\/?[a-z][\s\S]*>/i.test(text)
+  const isDescriptionHtml = currentContent ? hasHtmlContent(currentContent.description) : false
+  const isTitleHtml = currentContent ? hasHtmlContent(currentContent.title) : false
 
   // Typing effect
   useEffect(() => {
@@ -39,6 +42,11 @@ export function ScrollImageSection() {
     setIsTypingComplete(false)
     let currentChar = 0
     const fullText = currentContent.description
+    if (hasHtmlContent(fullText)) {
+      setTypingText(fullText)
+      setIsTypingComplete(true)
+      return
+    }
 
     const typingInterval = setInterval(() => {
       if (currentChar < fullText.length) {
@@ -167,23 +175,30 @@ export function ScrollImageSection() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.6, delay: 0.2 }}
+                      {...(isTitleHtml
+                        ? { dangerouslySetInnerHTML: { __html: currentContent.title } }
+                        : {})}
                     >
-                      {currentContent.title}
+                      {!isTitleHtml ? currentContent.title : null}
                     </motion.h2>
                   </motion.div>
                 </AnimatePresence>
 
                 <div className="text-gray-300 leading-relaxed min-h-[120px]">
-                  <span className="inline-block">
-                    {typingText}
-                    {!isTypingComplete && (
-                      <motion.span
-                        className="inline-block w-[2px] h-5 bg-purple-500 ml-1"
-                        animate={{ opacity: [1, 0] }}
-                        transition={{ duration: 0.8, repeat: Infinity }}
-                      />
-                    )}
-                  </span>
+                  {isDescriptionHtml ? (
+                    <div dangerouslySetInnerHTML={{ __html: currentContent.description }} />
+                  ) : (
+                    <span className="inline-block">
+                      {typingText}
+                      {!isTypingComplete && (
+                        <motion.span
+                          className="inline-block w-[2px] h-5 bg-purple-500 ml-1"
+                          animate={{ opacity: [1, 0] }}
+                          transition={{ duration: 0.8, repeat: Infinity }}
+                        />
+                      )}
+                    </span>
+                  )}
                 </div>
 
                 {/* Progress indicator */}

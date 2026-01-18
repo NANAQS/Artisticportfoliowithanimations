@@ -1,13 +1,12 @@
 'use client'
 
 import { motion } from 'motion/react'
-import { Mail, MapPin, Phone, Send, Twitter, Linkedin, Github, Dribbble, Instagram, Facebook, Youtube, ExternalLink } from 'lucide-react'
+import { Mail, MapPin, Send, Twitter, Linkedin, Github, Dribbble, Instagram, Facebook, Youtube, ExternalLink } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 interface ContactConfig {
   id: number
   email: string
-  phone: string | null
   location: string | null
 }
 
@@ -152,12 +151,6 @@ export function Contact() {
       label: 'Email', 
       value: contactConfig?.email || 'hello@portfolio.com',
       link: contactConfig?.email ? `mailto:${contactConfig.email}` : undefined
-    },
-    { 
-      icon: <Phone className="w-5 h-5" />, 
-      label: 'Phone', 
-      value: contactConfig?.phone || 'Not provided',
-      link: contactConfig?.phone ? `tel:${contactConfig.phone.replace(/\s/g, '')}` : undefined
     },
     { 
       icon: <MapPin className="w-5 h-5" />, 

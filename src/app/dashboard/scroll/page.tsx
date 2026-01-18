@@ -25,6 +25,7 @@ export default function ScrollPage() {
   const [typingText, setTypingText] = useState('')
   const [isTypingComplete, setIsTypingComplete] = useState(false)
   const previewContainerRef = useRef<HTMLDivElement>(null)
+  const hasHtmlContent = (text: string) => /<\/?[a-z][\s\S]*>/i.test(text)
 
   const [formData, setFormData] = useState({
     image: '',
@@ -58,6 +59,11 @@ export default function ScrollPage() {
     setIsTypingComplete(false)
     let currentChar = 0
     const fullText = currentContent.description
+    if (hasHtmlContent(fullText)) {
+      setTypingText(fullText)
+      setIsTypingComplete(true)
+      return
+    }
 
     const typingInterval = setInterval(() => {
       if (currentChar < fullText.length) {
@@ -162,6 +168,8 @@ export default function ScrollPage() {
   }
 
   const currentPreviewContent = contents[previewIndex]
+  const isPreviewTitleHtml = currentPreviewContent ? hasHtmlContent(currentPreviewContent.title) : false
+  const isPreviewDescriptionHtml = currentPreviewContent ? hasHtmlContent(currentPreviewContent.description) : false
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -301,23 +309,32 @@ export default function ScrollPage() {
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.5 }}
                       >
-                        <h2 className="text-white text-2xl mb-4">
-                          {currentPreviewContent.title}
+                        <h2
+                          className="text-white text-2xl mb-4"
+                          {...(isPreviewTitleHtml
+                            ? { dangerouslySetInnerHTML: { __html: currentPreviewContent.title } }
+                            : {})}
+                        >
+                          {!isPreviewTitleHtml ? currentPreviewContent.title : null}
                         </h2>
                       </motion.div>
                     </AnimatePresence>
 
                     <div className="text-gray-300 text-sm leading-relaxed min-h-[80px]">
-                      <span className="inline-block">
-                        {typingText}
-                        {!isTypingComplete && (
-                          <motion.span
-                            className="inline-block w-[2px] h-4 bg-purple-500 ml-1"
-                            animate={{ opacity: [1, 0] }}
-                            transition={{ duration: 0.8, repeat: Infinity }}
-                          />
-                        )}
-                      </span>
+                      {isPreviewDescriptionHtml ? (
+                        <div dangerouslySetInnerHTML={{ __html: currentPreviewContent.description }} />
+                      ) : (
+                        <span className="inline-block">
+                          {typingText}
+                          {!isTypingComplete && (
+                            <motion.span
+                              className="inline-block w-[2px] h-4 bg-purple-500 ml-1"
+                              animate={{ opacity: [1, 0] }}
+                              transition={{ duration: 0.8, repeat: Infinity }}
+                            />
+                          )}
+                        </span>
+                      )}
                     </div>
 
                     {/* Progress indicator */}

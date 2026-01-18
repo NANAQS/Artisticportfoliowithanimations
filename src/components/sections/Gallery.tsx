@@ -596,7 +596,10 @@ export function Gallery() {
                       {selectedArtwork.category}
                     </p>
                     <h2 className="text-white mb-4 text-2xl">{selectedArtwork.title}</h2>
-                    <p className="text-gray-300 mb-6">{selectedArtwork.description}</p>
+                    <div
+                      className="text-gray-300 mb-6"
+                      dangerouslySetInnerHTML={{ __html: selectedArtwork.description }}
+                    />
                     
                     {/* YouTube Player - Timelapse */}
                     {selectedArtwork.youtubeUrl && getYouTubeId(selectedArtwork.youtubeUrl) && (

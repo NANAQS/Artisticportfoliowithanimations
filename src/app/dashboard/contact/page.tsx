@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
-import { Mail, Phone, MapPin, Plus, Trash2, Edit2, Save, X, Link2, Twitter, Linkedin, Github, Dribbble, Instagram, Facebook, Youtube, ExternalLink } from 'lucide-react'
+import { Mail, MapPin, Plus, Trash2, Edit2, Save, X, Link2, Twitter, Linkedin, Github, Dribbble, Instagram, Facebook, Youtube, ExternalLink } from 'lucide-react'
 import { Loader2 } from 'lucide-react'
 
 interface ContactConfig {
   id: number
   email: string
-  phone: string | null
   location: string | null
 }
 
@@ -86,7 +85,6 @@ export default function ContactPage() {
 
   const [formData, setFormData] = useState({
     email: '',
-    phone: '',
     location: '',
   })
 
@@ -109,7 +107,6 @@ export default function ContactPage() {
       setSocialLinks(data.socialLinks || [])
       setFormData({
         email: data.contact?.email || '',
-        phone: data.contact?.phone || '',
         location: data.contact?.location || '',
       })
     } catch (error) {
@@ -268,7 +265,6 @@ export default function ContactPage() {
     if (contactConfig) {
       setFormData({
         email: contactConfig.email,
-        phone: contactConfig.phone || '',
         location: contactConfig.location || '',
       })
     }
@@ -352,24 +348,6 @@ export default function ContactPage() {
                 >
                   {contactConfig?.email}
                 </a>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-gray-300 text-sm mb-2">Telefone</label>
-            {editingContact ? (
-              <input
-                type="text"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500"
-                placeholder="+1 (555) 123-4567"
-              />
-            ) : (
-              <div className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-lg">
-                <Phone className="w-5 h-5 text-purple-400" />
-                <span className="text-white">{contactConfig?.phone || 'Não informado'}</span>
               </div>
             )}
           </div>
@@ -571,4 +549,3 @@ export default function ContactPage() {
     </div>
   )
 }
-
