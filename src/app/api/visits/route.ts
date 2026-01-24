@@ -80,13 +80,25 @@ export async function GET(request: Request) {
     // Estatísticas gerais
     const totalVisits = visits.length
     const uniqueIPs = new Set(visits.map(v => v.ip)).size
+    const ipCounts: Record<string, number> = {}
+    visits.forEach(visit => {
+      ipCounts[visit.ip] = (ipCounts[visit.ip] || 0) + 1
+    })
+    const returningVisitors = Object.values(ipCounts).filter(count => count > 1).length
     const countries = visits.filter(v => v.country).map(v => v.country!)
     const uniqueCountries = new Set(countries).size
+    const cities = visits.filter(v => v.city).map(v => v.city!)
+    const uniqueCities = new Set(cities).size
 
     // Visitas por país
     const visitsByCountry: Record<string, number> = {}
     countries.forEach(country => {
       visitsByCountry[country] = (visitsByCountry[country] || 0) + 1
+    })
+
+    const visitsByCity: Record<string, number> = {}
+    cities.forEach(city => {
+      visitsByCity[city] = (visitsByCity[city] || 0) + 1
     })
 
     // Visitas por dia
@@ -102,11 +114,28 @@ export async function GET(request: Request) {
       visitsByPath[visit.path] = (visitsByPath[visit.path] || 0) + 1
     })
 
+    const visitsByReferer: Record<string, number> = {}
+    visits.forEach(visit => {
+      if (!visit.referer) return
+      let referer = visit.referer
+      try {
+        referer = new URL(visit.referer).hostname
+      } catch {
+        referer = visit.referer
+      }
+      visitsByReferer[referer] = (visitsByReferer[referer] || 0) + 1
+    })
+
     // Top países
     const topCountries = Object.entries(visitsByCountry)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 10)
       .map(([country, count]) => ({ country, count }))
+
+    const topCities = Object.entries(visitsByCity)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([city, count]) => ({ city, count }))
 
     // Gráfico de linha (visitas por dia)
     const dailyVisits = Object.entries(visitsByDay)
@@ -119,13 +148,26 @@ export async function GET(request: Request) {
       .slice(0, 10)
       .map(([path, count]) => ({ path, count }))
 
+    const topReferers = Object.entries(visitsByReferer)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([referer, count]) => ({ referer, count }))
+
+    const days = Math.max(1, Math.ceil((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24)))
+    const avgVisitsPerDay = Math.round((totalVisits / days) * 10) / 10
+
     return NextResponse.json({
       totalVisits,
       uniqueIPs,
       uniqueCountries,
+      uniqueCities,
+      returningVisitors,
+      avgVisitsPerDay,
       topCountries,
+      topCities,
       dailyVisits,
       topPages,
+      topReferers,
       period
     })
   } catch (error) {
@@ -136,4 +178,3 @@ export async function GET(request: Request) {
     )
   }
 }
-

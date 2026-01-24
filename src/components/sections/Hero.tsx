@@ -18,12 +18,12 @@ interface HeroConfig {
 }
 
 const DEFAULT_CONFIG: HeroConfig = {
-  heroImageUrl: 'https://lh3.googleusercontent.com/d/1ul-n2KW50Y6QkDy0MSENg39dr9H__bJR',
-  welcomeText: 'Hello! Welcome! ✨',
-  subtitle: '2D Artist & Illustrator',
-  title: 'Bringing Stories to Life',
-  titleHighlight: 'Through Art',
-  description: 'Creating vibrant illustrations, character designs, and digital paintings that capture emotion and imagination',
+  heroImageUrl: '',
+  welcomeText: 'loading...',
+  subtitle: 'loading...',
+  title: 'loading...',
+  titleHighlight: 'loading...',
+  description: 'loading...',
   stats: [
     { number: '500+', label: 'Artworks' },
     { number: '200+', label: 'Happy Clients' },
@@ -78,10 +78,10 @@ export function Hero() {
   return (
     <section
       ref={ref}
-      className="relative min-h-screen flex items-center overflow-x-hidden bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900"
+      className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900"
     >
       {/* Animated background elements */}
-      <motion.div style={{ y }} className="absolute inset-0 overflow-x-hidden">
+      <motion.div style={{ y }} className="absolute inset-0 overflow-hidden">
         <motion.div
           className="absolute top-20 left-4 md:left-20 w-48 md:w-72 h-48 md:h-72 bg-purple-500/20 rounded-full blur-3xl"
           style={{ scale }}

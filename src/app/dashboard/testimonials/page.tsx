@@ -14,6 +14,7 @@ interface Testimonial {
   text: string
   rating: number
   skillsHighlighted: string[]
+  skillLevels?: Record<string, number>
 }
 
 interface Skill {
@@ -113,7 +114,8 @@ export default function TestimonialsPage() {
     // Buscar níveis atuais das skills
     const skillsWithLevel = testimonial.skillsHighlighted.map(skillName => {
       const skill = skills.find(s => s.name === skillName)
-      return { name: skillName, level: skill?.level || 50 }
+      const levelFromTestimonial = testimonial.skillLevels?.[skillName]
+      return { name: skillName, level: levelFromTestimonial ?? skill?.level ?? 50 }
     })
     setSelectedSkills(skillsWithLevel)
     setIsModalOpen(true)

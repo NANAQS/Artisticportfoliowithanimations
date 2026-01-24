@@ -14,23 +14,8 @@ async function calculateSkillMentions(skillName: string): Promise<number> {
   return testimonials.length
 }
 
-// Função para atualizar nível de skill baseado no depoimento mais recente
-// O nível vem do depoimento, não é calculado
-async function updateSkillLevel(skillName: string, level: number) {
-  try {
-    const skill = await prisma.skill.findUnique({
-      where: { name: skillName }
-    })
-    
-    if (skill) {
-      await prisma.skill.update({
-        where: { id: skill.id },
-        data: { level }
-      })
-    }
-  } catch (error) {
-    console.error(`Erro ao atualizar nível da skill ${skillName}:`, error)
-  }
+function isValidSkillLevels(value: unknown): value is Record<string, number> {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
 }
 
 // Função para recalcular todas as skills baseado nos depoimentos
@@ -187,6 +172,20 @@ export async function POST(request: Request) {
 
       // Validar skillLevels se fornecido
       const skillLevels = data.skillLevels || {}
+      if (data.skillLevels !== undefined && !isValidSkillLevels(data.skillLevels)) {
+        return NextResponse.json(
+          { error: 'skillLevels deve ser um objeto com níveis numéricos' },
+          { status: 400 }
+        )
+      }
+      for (const [skillName, level] of Object.entries(skillLevels)) {
+        if (data.skillsHighlighted?.includes(skillName) && (typeof level !== 'number' || level < 0 || level > 100)) {
+          return NextResponse.json(
+            { error: `Nível inválido para a skill ${skillName}` },
+            { status: 400 }
+          )
+        }
+      }
       
       // Criar skills que não existem automaticamente
       for (const skillName of data.skillsHighlighted) {
@@ -195,8 +194,8 @@ export async function POST(request: Request) {
         })
         
         if (!existingSkill) {
-          // Criar skill automaticamente com nível do depoimento ou padrão 50
-          const level = skillLevels[skillName] || 50
+          // Criar skill automaticamente com nível padrão ou fornecido (não vinculado ao depoimento)
+          const level = skillLevels[skillName] ?? 50
           await prisma.skill.create({
             data: {
               name: skillName,
@@ -204,10 +203,6 @@ export async function POST(request: Request) {
               mentions: 0, // Será recalculado abaixo
             }
           })
-        } else {
-          // Atualizar nível da skill com o valor do depoimento
-          const level = skillLevels[skillName] !== undefined ? skillLevels[skillName] : existingSkill.level
-          await updateSkillLevel(skillName, level)
         }
       }
 
@@ -219,10 +214,11 @@ export async function POST(request: Request) {
           text: data.text,
           rating: data.rating,
           skillsHighlighted: data.skillsHighlighted,
+          skillLevels: skillLevels,
         }
       })
       
-      // Recalcular apenas menções das skills mencionadas (nível já foi atualizado acima)
+      // Recalcular apenas menções das skills mencionadas
       await recalculateSkillMentions(data.skillsHighlighted)
       
       return NextResponse.json({
@@ -339,6 +335,20 @@ export async function PUT(request: Request) {
 
       // Validar skillLevels se fornecido
       const skillLevels = data.skillLevels || {}
+      if (data.skillLevels !== undefined && !isValidSkillLevels(data.skillLevels)) {
+        return NextResponse.json(
+          { error: 'skillLevels deve ser um objeto com níveis numéricos' },
+          { status: 400 }
+        )
+      }
+      for (const [skillName, level] of Object.entries(skillLevels)) {
+        if (data.skillsHighlighted?.includes(skillName) && (typeof level !== 'number' || level < 0 || level > 100)) {
+          return NextResponse.json(
+            { error: `Nível inválido para a skill ${skillName}` },
+            { status: 400 }
+          )
+        }
+      }
       
       // Criar skills que não existem automaticamente (se skillsHighlighted foi fornecido)
       if (data.skillsHighlighted && Array.isArray(data.skillsHighlighted)) {
@@ -348,8 +358,8 @@ export async function PUT(request: Request) {
           })
           
           if (!existingSkill) {
-            // Criar skill automaticamente com nível do depoimento ou padrão 50
-            const level = skillLevels[skillName] || 50
+            // Criar skill automaticamente com nível padrão ou fornecido (não vinculado ao depoimento)
+            const level = skillLevels[skillName] ?? 50
             await prisma.skill.create({
               data: {
                 name: skillName,
@@ -357,10 +367,6 @@ export async function PUT(request: Request) {
                 mentions: 0, // Será recalculado abaixo
               }
             })
-          } else {
-            // Atualizar nível da skill com o valor do depoimento
-            const level = skillLevels[skillName] !== undefined ? skillLevels[skillName] : existingSkill.level
-            await updateSkillLevel(skillName, level)
           }
         }
       }
@@ -374,10 +380,11 @@ export async function PUT(request: Request) {
           ...(data.text && { text: data.text }),
           ...(data.rating !== undefined && { rating: data.rating }),
           ...(data.skillsHighlighted && { skillsHighlighted: data.skillsHighlighted }),
+          ...(data.skillLevels !== undefined && { skillLevels }),
         }
       })
 
-      // Recalcular apenas menções das skills afetadas (nível já foi atualizado acima)
+      // Recalcular apenas menções das skills afetadas
       if (data.skillsHighlighted && oldTestimonial) {
         const oldSkills = oldTestimonial.skillsHighlighted || []
         const newSkills = data.skillsHighlighted

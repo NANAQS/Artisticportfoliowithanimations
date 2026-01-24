@@ -3,21 +3,26 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
 import {
-  BarChart3, Users, Globe, TrendingUp, Eye,
+  Users, Globe, TrendingUp, Eye,
   Loader2, MapPin, Calendar, FileText
 } from 'lucide-react'
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
 
 interface AnalyticsData {
   totalVisits: number
   uniqueIPs: number
   uniqueCountries: number
+  uniqueCities: number
+  returningVisitors: number
+  avgVisitsPerDay: number
   topCountries: { country: string; count: number }[]
+  topCities: { city: string; count: number }[]
   dailyVisits: { date: string; visits: number }[]
   topPages: { path: string; count: number }[]
+  topReferers: { referer: string; count: number }[]
   period: string
 }
 
@@ -65,10 +70,22 @@ export default function DashboardOverview() {
       color: 'from-green-500 to-emerald-500',
     },
     {
-      label: 'Taxa de Crescimento',
-      value: '+12%',
-      icon: TrendingUp,
+      label: 'Cidades',
+      value: analytics?.uniqueCities || 0,
+      icon: MapPin,
       color: 'from-orange-500 to-red-500',
+    },
+    {
+      label: 'Retornos (IPs)',
+      value: analytics?.returningVisitors || 0,
+      icon: Users,
+      color: 'from-cyan-500 to-blue-500',
+    },
+    {
+      label: 'Média por Dia',
+      value: analytics?.avgVisitsPerDay || 0,
+      icon: TrendingUp,
+      color: 'from-pink-500 to-rose-500',
     },
   ]
 
@@ -278,6 +295,64 @@ export default function DashboardOverview() {
               </div>
             ))}
             {(!analytics?.topPages || analytics.topPages.length === 0) && (
+              <p className="text-gray-400 text-center py-8">Nenhum dado disponível</p>
+            )}
+          </div>
+        </motion.div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10"
+        >
+          <div className="flex items-center gap-2 mb-6">
+            <MapPin className="w-5 h-5 text-orange-400" />
+            <h2 className="text-xl font-bold text-white">Cidades Mais Acessadas</h2>
+          </div>
+          <div className="space-y-3">
+            {analytics?.topCities.slice(0, 10).map((city, index) => (
+              <div key={city.city} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">
+                    {index + 1}
+                  </div>
+                  <span className="text-gray-300 font-medium">{city.city}</span>
+                </div>
+                <span className="text-orange-300 font-bold">{city.count}</span>
+              </div>
+            ))}
+            {(!analytics?.topCities || analytics.topCities.length === 0) && (
+              <p className="text-gray-400 text-center py-8">Nenhum dado disponível</p>
+            )}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10"
+        >
+          <div className="flex items-center gap-2 mb-6">
+            <TrendingUp className="w-5 h-5 text-cyan-400" />
+            <h2 className="text-xl font-bold text-white">Fontes de Tráfego</h2>
+          </div>
+          <div className="space-y-3">
+            {analytics?.topReferers.slice(0, 10).map((referer, index) => (
+              <div key={referer.referer} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">
+                    {index + 1}
+                  </div>
+                  <span className="text-gray-300 font-medium">{referer.referer}</span>
+                </div>
+                <span className="text-cyan-300 font-bold">{referer.count}</span>
+              </div>
+            ))}
+            {(!analytics?.topReferers || analytics.topReferers.length === 0) && (
               <p className="text-gray-400 text-center py-8">Nenhum dado disponível</p>
             )}
           </div>
