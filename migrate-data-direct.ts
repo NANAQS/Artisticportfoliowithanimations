@@ -15,9 +15,12 @@ const localAdapter = new PrismaPg(localPool)
 const localPrisma = new PrismaClient({ adapter: localAdapter })
 
 // Criar cliente Prisma para banco de produção
-// Usar accelerateUrl diretamente no construtor
+const PROD_DB_URL = process.env.PRISMA_DATABASE_URL
+if (!PROD_DB_URL) {
+  throw new Error('PRISMA_DATABASE_URL não definido')
+}
 const prodPrisma = new PrismaClient({
-  accelerateUrl: process.env.PRISMA_DATABASE_URL,
+  accelerateUrl: PROD_DB_URL,
 })
 
 async function migrateData() {
@@ -218,4 +221,3 @@ migrateData()
     console.error(error)
     process.exit(1)
   })
-
