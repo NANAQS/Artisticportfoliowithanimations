@@ -107,16 +107,7 @@ async function migrateData() {
     }
     console.log(`✅ ${scrollContent.length} conteúdos de scroll migrados\n`)
 
-    // 6. Testimonials
-    console.log('📦 Migrando Testimonials...')
-    const testimonials = await localPrisma.testimonial.findMany()
-    for (const testimonial of testimonials) {
-      const { id, ...data } = testimonial
-      await prodPrisma.testimonial.create({
-        data,
-      })
-    }
-    console.log(`✅ ${testimonials.length} depoimentos migrados\n`)
+    
 
     // 7. Visits
     console.log('📦 Migrando Visits...')
